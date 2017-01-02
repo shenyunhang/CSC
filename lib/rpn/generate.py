@@ -5,7 +5,7 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-from fast_rcnn.config import cfg
+from configure import cfg
 from utils.blob import im_list_to_blob
 from utils.timer import Timer
 import numpy as np

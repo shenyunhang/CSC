@@ -9,6 +9,7 @@
 
 import os.path as osp
 import sys
+# from fast_rcnn.config import cfg
 
 def add_path(path):
     if path not in sys.path:
@@ -17,7 +18,11 @@ def add_path(path):
 this_dir = osp.dirname(__file__)
 
 # Add caffe to PYTHONPATH
-caffe_path = osp.join(this_dir, '..', 'caffe-fast-rcnn', 'python')
+# if cfg.WSL:
+    # caffe_path = osp.join(this_dir,'..', 'caffe-wsl', 'python')
+# else:
+    # caffe_path = osp.join(this_dir, '..', 'caffe-fast-rcnn', 'python')
+caffe_path = osp.join(this_dir,'..', 'caffe-wsl', 'python')
 add_path(caffe_path)
 
 # Add lib to PYTHONPATH

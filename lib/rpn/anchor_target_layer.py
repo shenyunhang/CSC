@@ -8,7 +8,7 @@
 import os
 import caffe
 import yaml
-from fast_rcnn.config import cfg
+from configure import cfg
 import numpy as np
 import numpy.random as npr
 from generate_anchors import generate_anchors

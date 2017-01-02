@@ -2,3 +2,6 @@
 	path = caffe-fast-rcnn
 	url = https://github.com/rbgirshick/caffe-fast-rcnn.git
 	branch = fast-rcnn
+[submodule "caffe-wsl"]
+	path = caffe-wsl
+	url = git@121.192.180.179:~/caffe-wsl.git

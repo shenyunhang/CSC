@@ -7,7 +7,8 @@
 
 """Test a Fast R-CNN network on an imdb (image database)."""
 
-from fast_rcnn.config import cfg, get_output_dir
+from configure import cfg, get_output_dir
+from configure import get_vis_dir
 from fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
 import argparse
 from utils.timer import Timer
@@ -18,6 +19,7 @@ from fast_rcnn.nms_wrapper import nms
 import cPickle
 from utils.blob import im_list_to_blob
 import os
+
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -55,6 +57,7 @@ def _get_image_blob(im):
 
     return blob, np.array(im_scale_factors)
 
+
 def _get_rois_blob(im_rois, im_scale_factors):
     """Converts RoIs into network inputs.
 
@@ -69,6 +72,7 @@ def _get_rois_blob(im_rois, im_scale_factors):
     rois_blob = np.hstack((levels, rois))
     return rois_blob.astype(np.float32, copy=False)
 
+
 def _project_im_rois(im_rois, scales):
     """Project image RoIs into the image pyramid built by _get_image_blob.
 
@@ -80,7 +84,7 @@ def _project_im_rois(im_rois, scales):
         rois (ndarray): R x 4 matrix of projected RoI coordinates
         levels (list): image pyramid levels used by each projected RoI
     """
-    im_rois = im_rois.astype(np.float, copy=False)
+    im_rois = im_rois.astype(np.float32, copy=False)
 
     if len(scales) > 1:
         widths = im_rois[:, 2] - im_rois[:, 0] + 1
@@ -97,13 +101,15 @@ def _project_im_rois(im_rois, scales):
 
     return rois, levels
 
+
 def _get_blobs(im, rois):
     """Convert an image and RoIs within that image into network inputs."""
-    blobs = {'data' : None, 'rois' : None}
+    blobs = {'data': None, 'rois': None}
     blobs['data'], im_scale_factors = _get_image_blob(im)
     if not cfg.TEST.HAS_RPN:
         blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
     return blobs, im_scale_factors
+
 
 def im_detect(net, im, boxes=None):
     """Detect object classes in an image given object proposals.
@@ -148,7 +154,8 @@ def im_detect(net, im, boxes=None):
     # do forward
     forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
     if cfg.TEST.HAS_RPN:
-        forward_kwargs['im_info'] = blobs['im_info'].astype(np.float32, copy=False)
+        forward_kwargs['im_info'] = blobs[
+            'im_info'].astype(np.float32, copy=False)
     else:
         forward_kwargs['rois'] = blobs['rois'].astype(np.float32, copy=False)
     blobs_out = net.forward(**forward_kwargs)
@@ -183,6 +190,7 @@ def im_detect(net, im, boxes=None):
 
     return scores, pred_boxes
 
+
 def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""
     import matplotlib.pyplot as plt
@@ -198,9 +206,10 @@ def vis_detections(im, class_name, dets, thresh=0.3):
                               bbox[2] - bbox[0],
                               bbox[3] - bbox[1], fill=False,
                               edgecolor='g', linewidth=3)
-                )
+            )
             plt.title('{}  {:.3f}'.format(class_name, score))
             plt.show()
+
 
 def apply_nms(all_boxes, thresh):
     """Apply non-maximum suppression to all predicted boxes output by the
@@ -224,6 +233,7 @@ def apply_nms(all_boxes, thresh):
             nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
     return nms_boxes
 
+
 def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
@@ -234,13 +244,16 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
                  for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, net)
+    if cfg.OPG_DEBUG:
+        vis_dir = get_vis_dir(imdb, net)
 
     # timers
-    _t = {'im_detect' : Timer(), 'misc' : Timer()}
+    _t = {'im_detect': Timer(), 'misc': Timer()}
 
     if not cfg.TEST.HAS_RPN:
         roidb = imdb.roidb
 
+    save_id = 0
     for i in xrange(num_images):
         # filter out any ground truth boxes
         if cfg.TEST.HAS_RPN:
@@ -255,6 +268,25 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
 
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
+
+        if cfg.OPG_DEBUG:
+            save_path = os.path.join(
+                vis_dir, str(save_id) + '_.png')
+            target_size=cfg.TEST.SCALES[0]
+
+            im_shape = im.shape
+            im_size_min = np.min(im_shape[0:2])
+            im_size_max = np.max(im_shape[0:2])
+
+            im_scale = float(target_size) / float(im_size_min)
+            # Prevent the biggest axis from being more than MAX_SIZE
+            if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
+                im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
+            im_save = cv2.resize(im, None, None, fx=im_scale, fy=im_scale,
+                                 interpolation=cv2.INTER_LINEAR)
+            cv2.imwrite(save_path, im_save)
+            save_id += 1
+
         scores, boxes = im_detect(net, im, box_proposals)
         _t['im_detect'].toc()
 
@@ -263,7 +295,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
         for j in xrange(1, imdb.num_classes):
             inds = np.where(scores[:, j] > thresh)[0]
             cls_scores = scores[inds, j]
-            cls_boxes = boxes[inds, j*4:(j+1)*4]
+            cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
             cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
                 .astype(np.float32, copy=False)
             keep = nms(cls_dets, cfg.TEST.NMS)
@@ -272,6 +304,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
                 vis_detections(im, imdb.classes[j], cls_dets)
             all_boxes[j][i] = cls_dets
 
+        if vis:
+            import matplotlib.pyplot as plt
+            # plt.show()
+            plt.close('all')
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]

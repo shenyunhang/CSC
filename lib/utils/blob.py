@@ -10,12 +10,16 @@
 import numpy as np
 import cv2
 
+
 def im_list_to_blob(ims):
     """Convert a list of images into a network input.
 
     Assumes images are already prepared (means subtracted, BGR order, ...).
     """
-    max_shape = np.array([im.shape for im in ims]).max(axis=0)
+    # max_shape = np.array([im.shape for im in ims]).max(axis=0)
+    all_shape = [im.shape for im in ims]
+    all_shape.append((227, 227, 3))
+    max_shape = np.array(all_shape).max(axis=0)
     num_images = len(ims)
     blob = np.zeros((num_images, max_shape[0], max_shape[1], 3),
                     dtype=np.float32)
@@ -27,6 +31,7 @@ def im_list_to_blob(ims):
     channel_swap = (0, 3, 1, 2)
     blob = blob.transpose(channel_swap)
     return blob
+
 
 def prep_im_for_blob(im, pixel_means, target_size, max_size):
     """Mean subtract and scale an image for use in a blob."""

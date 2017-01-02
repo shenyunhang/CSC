@@ -5,7 +5,7 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-from fast_rcnn.config import cfg
+from configure import cfg
 from nms.gpu_nms import gpu_nms
 from nms.cpu_nms import cpu_nms
 

@@ -8,7 +8,7 @@
 """Transform a roidb into a trainable roidb by adding a bunch of metadata."""
 
 import numpy as np
-from fast_rcnn.config import cfg
+from configure import cfg
 from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 import PIL
@@ -27,6 +27,7 @@ def prepare_roidb(imdb):
         roidb[i]['image'] = imdb.image_path_at(i)
         roidb[i]['width'] = sizes[i][0]
         roidb[i]['height'] = sizes[i][1]
+        roidb[i]['gt_classes'] = imdb.image_classes_at(i)
         # need gt_overlaps as a dense array for argmax
         gt_overlaps = roidb[i]['gt_overlaps'].toarray()
         # max overlap with gt over classes (columns)

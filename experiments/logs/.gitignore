@@ -1,1 +1,4 @@
-*.txt*
+*.txt
+*.log
+*.png
+*.md

@@ -24,8 +24,8 @@ from easydict import EasyDict as edict
 
 __C = edict()
 # Consumers can get config by:
-#   from fast_rcnn_config import cfg
-cfg = __C
+#   from fast_rcnn_config import cfg_fast_rcnn
+cfg_fast_rcnn = __C
 
 #
 # Training options
@@ -207,7 +207,6 @@ __C.USE_GPU_NMS = True
 # Default GPU device id
 __C.GPU_ID = 0
 
-
 def get_output_dir(imdb, net=None):
     """Return the directory where experimental artifacts are placed.
     If the directory does not exist, it is created.
@@ -222,6 +221,7 @@ def get_output_dir(imdb, net=None):
         os.makedirs(outdir)
     return outdir
 
+'''
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the
     options in b whenever they are also specified in a.

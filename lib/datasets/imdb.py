@@ -11,7 +11,8 @@ import PIL
 from utils.cython_bbox import bbox_overlaps
 import numpy as np
 import scipy.sparse
-from fast_rcnn.config import cfg
+from configure import cfg
+
 
 class imdb(object):
     """Image database."""
@@ -59,6 +60,7 @@ class imdb(object):
     def roidb(self):
         # A roidb is a list of dictionaries, each with the following keys:
         #   boxes
+        #   box_scores
         #   gt_overlaps
         #   gt_classes
         #   flipped
@@ -76,7 +78,7 @@ class imdb(object):
 
     @property
     def num_images(self):
-      return len(self.image_index)
+        return len(self.image_index)
 
     def image_path_at(self, i):
         raise NotImplementedError
@@ -96,8 +98,8 @@ class imdb(object):
         raise NotImplementedError
 
     def _get_widths(self):
-      return [PIL.Image.open(self.image_path_at(i)).size[0]
-              for i in xrange(self.num_images)]
+        return [PIL.Image.open(self.image_path_at(i)).size[0]
+                for i in xrange(self.num_images)]
 
     def append_flipped_images(self):
         num_images = self.num_images
@@ -109,10 +111,11 @@ class imdb(object):
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
             assert (boxes[:, 2] >= boxes[:, 0]).all()
-            entry = {'boxes' : boxes,
-                     'gt_overlaps' : self.roidb[i]['gt_overlaps'],
-                     'gt_classes' : self.roidb[i]['gt_classes'],
-                     'flipped' : True}
+            entry = {'boxes': boxes,
+                     'box_scores': self.roidb[i]['box_scores'],
+                     'gt_overlaps': self.roidb[i]['gt_overlaps'],
+                     'gt_classes': self.roidb[i]['gt_classes'],
+                     'flipped': True}
             self.roidb.append(entry)
         self._image_index = self._image_index * 2
 
@@ -129,25 +132,26 @@ class imdb(object):
         """
         # Record max overlap value for each gt box
         # Return vector of overlap values
-        areas = { 'all': 0, 'small': 1, 'medium': 2, 'large': 3,
-                  '96-128': 4, '128-256': 5, '256-512': 6, '512-inf': 7}
-        area_ranges = [ [0**2, 1e5**2],    # all
-                        [0**2, 32**2],     # small
-                        [32**2, 96**2],    # medium
-                        [96**2, 1e5**2],   # large
-                        [96**2, 128**2],   # 96-128
-                        [128**2, 256**2],  # 128-256
-                        [256**2, 512**2],  # 256-512
-                        [512**2, 1e5**2],  # 512-inf
-                      ]
-        assert areas.has_key(area), 'unknown area range: {}'.format(area)
+        areas = {'all': 0, 'small': 1, 'medium': 2, 'large': 3,
+                 '96-128': 4, '128-256': 5, '256-512': 6, '512-inf': 7}
+        area_ranges = [[0**2, 1e5**2],    # all
+                       [0**2, 32**2],     # small
+                       [32**2, 96**2],    # medium
+                       [96**2, 1e5**2],   # large
+                       [96**2, 128**2],   # 96-128
+                       [128**2, 256**2],  # 128-256
+                       [256**2, 512**2],  # 256-512
+                       [512**2, 1e5**2],  # 512-inf
+                       ]
+        assert area in areas, 'unknown area range: {}'.format(area)
         area_range = area_ranges[areas[area]]
         gt_overlaps = np.zeros(0)
         num_pos = 0
         for i in xrange(self.num_images):
             # Checking for max_overlaps == 1 avoids including crowd annotations
             # (...pretty hacking :/)
-            max_gt_overlaps = self.roidb[i]['gt_overlaps'].toarray().max(axis=1)
+            max_gt_overlaps = self.roidb[i][
+                'gt_overlaps'].toarray().max(axis=1)
             gt_inds = np.where((self.roidb[i]['gt_classes'] > 0) &
                                (max_gt_overlaps == 1))[0]
             gt_boxes = self.roidb[i]['boxes'][gt_inds, :]
@@ -206,14 +210,16 @@ class imdb(object):
         return {'ar': ar, 'recalls': recalls, 'thresholds': thresholds,
                 'gt_overlaps': gt_overlaps}
 
-    def create_roidb_from_box_list(self, box_list, gt_roidb):
+    def create_roidb_from_box_list(self, box_list, gt_roidb, score_list=None):
         assert len(box_list) == self.num_images, \
-                'Number of boxes must match number of ground-truth images'
+            'Number of boxes must match number of ground-truth images'
         roidb = []
         for i in xrange(self.num_images):
             boxes = box_list[i]
+            box_scores = score_list[i] if score_list is not None else None
             num_boxes = boxes.shape[0]
-            overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
+            overlaps = np.zeros(
+                (num_boxes, self.num_classes), dtype=np.float32)
 
             if gt_roidb is not None and gt_roidb[i]['boxes'].size > 0:
                 gt_boxes = gt_roidb[i]['boxes']
@@ -227,11 +233,12 @@ class imdb(object):
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
             roidb.append({
-                'boxes' : boxes,
-                'gt_classes' : np.zeros((num_boxes,), dtype=np.int32),
-                'gt_overlaps' : overlaps,
-                'flipped' : False,
-                'seg_areas' : np.zeros((num_boxes,), dtype=np.float32),
+                'boxes': boxes,
+                'box_scores': box_scores,
+                'gt_classes': np.zeros((num_boxes,), dtype=np.int32),
+                'gt_overlaps': overlaps,
+                'flipped': False,
+                'seg_areas': np.zeros((num_boxes,), dtype=np.float32),
             })
         return roidb
 
@@ -240,6 +247,8 @@ class imdb(object):
         assert len(a) == len(b)
         for i in xrange(len(a)):
             a[i]['boxes'] = np.vstack((a[i]['boxes'], b[i]['boxes']))
+            a[i]['box_scores'] = np.vstack(
+                (a[i]['box_scores'], b[i]['box_scores']))
             a[i]['gt_classes'] = np.hstack((a[i]['gt_classes'],
                                             b[i]['gt_classes']))
             a[i]['gt_overlaps'] = scipy.sparse.vstack([a[i]['gt_overlaps'],
