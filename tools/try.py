@@ -2,7 +2,7 @@
 
 import _init_paths
 from fast_rcnn.train import get_training_roidb
-from cpg.config import cfg_cpg
+from wsl.config import cfg_wsl
 from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 import argparse
 import sys
@@ -43,6 +43,8 @@ def parse_args():
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
+    parser.add_argument('--comp', dest='comp_mode', help='competition mode',
+                        action='store_true')
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -57,7 +59,7 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
-    cfg_basic_generation(cfg_cpg)
+    cfg_basic_generation(cfg_wsl)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
@@ -69,13 +71,23 @@ if __name__ == '__main__':
     pprint.pprint(cfg)
 
     imdb = get_imdb(args.imdb_name)
+    imdb.competition_mode(args.comp_mode)
     imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
 
-    print 'Appending horizontally-flipped training examples...'
-    imdb.append_flipped_images()
-    print 'done'
+    # print 'Appending horizontally-flipped training examples...'
+    # imdb.append_flipped_images()
+    # print 'done'
 
+    # print 'Preparing training data...'
+    # rdl_roidb.prepare_roidb(imdb)
+    # print 'done'
 
-    print 'Preparing training data...'
-    rdl_roidb.prepare_roidb(imdb)
-    print 'done'
+    # our
+    # imdb.set_salt('60f388c4-d450-4e78-88ed-5d1a669eb9f0')
+    # baseline
+    imdb.set_salt('ade24af4-a439-4c21-a678-85102287437c')
+
+    imdb.evaluate_detections(None, 'output', None)
+
+    # imdb.visualization_detection('vis/draw_our')
+    imdb.visualization_detection('vis/draw_wsddn')

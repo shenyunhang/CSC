@@ -1,0 +1,12 @@
+TRAIN:
+        MAX_SIZE: 2000
+        USE_PREFETCH: True
+        PROPOSAL_METHOD: mcg
+
+TEST:
+        MAX_SIZE: 2000
+        PROPOSAL_METHOD: mcg
+USE_PSEUDO: True
+RNG_SEED: 6
+EXP_DIR: fast_rcnn_wsl
+WSL: False

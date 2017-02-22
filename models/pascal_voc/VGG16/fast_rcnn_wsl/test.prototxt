@@ -460,10 +460,10 @@ layer {
   }
 }
 layer {
-  name: "cls_score"
+  name: "cls_score_"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score"
+  top: "cls_score_"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -512,28 +512,6 @@ layer {
 layer {
   name: "cls_prob"
   type: "Softmax"
-  bottom: "cls_score"
+  bottom: "cls_score_"
   top: "cls_prob"
 }
-
-#-----------------------------------CPG-----------------------------------------------------------
-layer {
-  name: "cls_prob2"
-  type: "Softmax"
-  bottom: "cls_score"
-  top: "cls_prob2"
-}
-layer { name: "cls_pool" type: "GeneralPooling" bottom: "cls_prob2" top: "cls_pool" general_pooling_param { pool: SUM axis: 0 }}
-
-layer { name: "mil" type: "MIL" bottom: "cls_pool" bottom: "cls_pool" bottom: "rois" 
-	top: "opg_roi_select"
-	cpg_param { is_cpg: true mode: CPG_POOLING is_order: false is_contrast: false debug_info: true
-	start_layer_name: "conv1_1" end_layer_name: "cls_pool" ignore_label: 20
-	opg_blob_name: "data"
-#	opg_blob_name: "conv1_2"
-#	opg_blob_name: "conv2_2"
-#	opg_blob_name: "conv3_3"
-#	opg_blob_name: "conv4_3"
-#	opg_blob_name: "conv5_3"
-	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
-	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}

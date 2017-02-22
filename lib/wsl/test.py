@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -17,7 +19,8 @@ import cPickle
 from utils.blob import im_list_to_blob
 import os
 import time
-from roi_data_layer.minibatch_cpg import get_inner_outer_rois
+import pprint
+from roi_data_layer.minibatch_wsl import get_inner_outer_rois
 
 
 def _get_image_blob(im):
@@ -174,6 +177,8 @@ def im_detect(net, im, boxes, box_scores):
         blobs['roi_scores'] = blobs['roi_scores'][index]
         # boxes = boxes[index, :]
         # box_scores = box_scores[index]
+
+        # print index.shape,inv_index.shape
 
         if cfg.CONTEXT:
             blobs['rois_context'] = blobs['rois_context'][index, :]
@@ -398,7 +403,7 @@ def save_debug_im(im, target_size, save_path):
     cv2.imwrite(save_path, im_save)
 
 
-def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
+def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
     """Test a network on an image database."""
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh
@@ -411,6 +416,9 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
                  for _ in xrange(imdb.num_classes)]
     all_scores = [[[] for _ in xrange(num_images)]
                   for _ in xrange(imdb.num_classes)]
+
+    all_boxes_o = [[[] for _ in xrange(num_images)]
+                   for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, net)
     if cfg.OPG_DEBUG:
@@ -426,8 +434,8 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
     for i in xrange(num_images):
         # if imdb.image_index[i] != '001547':
         # continue
-        # if i < 10:
-            # continue
+        # if i > 100:
+            # break
 
         box_proposals = roidb[i]['boxes']
         rois_per_this_image = min(cfg.TEST.ROIS_PER_IM, len(box_proposals))
@@ -444,10 +452,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
         boxes = None
         for target_size in test_scales:
             if cfg.OPG_DEBUG:
-                # save_subdir = time.strftime("%Y-%m-%d", time.gmtime())
-                # save_dir = os.path.join('tmp', save_subdir)
-                # if not os.path.exists(save_dir):
-                # os.makedirs(save_dir)
                 save_path = os.path.join(
                     vis_dir, str(save_id) + '_.png')
                 save_debug_im(im, target_size, save_path)
@@ -462,9 +466,12 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
             else:
                 # scores = np.vstack((scores, scores_scale))
                 # boxes = np.vstack((boxes, boxes_scale))
+
+                # TODO(YH): something to do
                 scores += scores_scale
                 assert np.array_equal(
-                    boxes, boxes_scale), 'predict boxes at each scale should be the same'
+                    boxes, boxes_scale), 'boxes at each scale should be the same'
+
             if cfg.OPG_DEBUG:
                 os.remove(save_path)
 
@@ -477,6 +484,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
             box_proposals_flip[:, 2] = im.shape[1] - oldx1 - 1
 
             for target_size in test_scales:
+                boxes_scale_o = boxes_scale
                 if cfg.OPG_DEBUG:
                     save_path = os.path.join(
                         vis_dir, str(save_id) + '_.png')
@@ -488,11 +496,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
                     net, im_flip, box_proposals_flip, box_scores)
 
                 # scores = np.vstack((scores, scores_scale))
-                # boxes = np.vstack((boxes, boxes_scale))
+                # boxes = np.vstack((boxes, boxes_scale_o))
+
                 scores += scores_scale
-                # assert np.array_equal(
-                # boxes, boxes_scale), 'predict boxes at each scale should be
-                # the same'
+
                 if cfg.OPG_DEBUG:
                     os.remove(save_path)
 
@@ -502,6 +509,12 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
         # skip j = 0, because it's the background class
         # fuck skip
         for j in xrange(0, imdb.num_classes):
+            if 'trainval' in imdb.name:
+                if imdb.image_classes_at(i)[j] == 0:
+                    all_boxes[j][i] = np.zeros((0, 5), dtype=np.float32)
+                    all_boxes_o[j][i] = np.zeros((0, 5), dtype=np.float32)
+                    continue
+
             all_scores[j][i] = sum(scores[:, j])
 
             inds = np.where(scores[:, j] > thresh)[0]
@@ -515,10 +528,124 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
                 vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
             all_boxes[j][i] = cls_dets
 
+            # 保留原始检测结果
+            cls_scores_o = scores[:, j]
+            cls_boxes_o = boxes[:, j * 4:(j + 1) * 4]
+            cls_dets_o = np.hstack((cls_boxes_o, cls_scores_o[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+            all_boxes_o[j][i] = cls_dets_o
+
         if vis:
             import matplotlib.pyplot as plt
             # plt.show()
             plt.close('all')
+        # Limit to max_per_image detections *over all classes*
+        if max_per_image > 0:
+            image_scores = np.hstack([all_boxes[j][i][:, -1]
+                                      for j in xrange(0, imdb.num_classes)])
+            if len(image_scores) > max_per_image:
+                image_thresh = np.sort(image_scores)[-max_per_image]
+                for j in xrange(0, imdb.num_classes):
+                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                    all_boxes[j][i] = all_boxes[j][i][keep, :]
+        _t['misc'].toc()
+
+        print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
+            .format(i + 1, num_images, _t['im_detect'].average_time,
+                    _t['misc'].average_time)
+
+    if cfg.OPG_DEBUG:
+        return
+
+    det_file = os.path.join(output_dir, 'detections.pkl')
+    with open(det_file, 'wb') as f:
+        cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
+
+    det_file_o = os.path.join(output_dir, 'detections_o.pkl')
+    with open(det_file_o, 'wb') as f:
+        cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
+
+    print 'Evaluating detections'
+    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
+
+
+def test_net_ensemble(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
+    print 'max_per_image: ', max_per_image
+    print 'thresh: ', thresh
+
+    num_images = len(imdb.image_index)
+    # all detections are collected into:
+    #    all_boxes[cls][image] = N x 5 array of detections in
+    #    (x1, y1, x2, y2, score)
+    all_boxes = [[[] for _ in xrange(num_images)]
+                 for _ in xrange(imdb.num_classes)]
+    all_scores = [[[] for _ in xrange(num_images)]
+                  for _ in xrange(imdb.num_classes)]
+
+    output_dir = get_output_dir(imdb, None)
+
+    # load all the detection results
+    all_boxes_cache = None
+    for det_dir in det_dirs:
+        det_path = os.path.join(det_dir, 'detections_o.pkl')
+        print 'load det: ', det_path
+        assert os.path.isfile(det_path), 'no det file: ' + det_path
+        with open(det_path, 'rb') as f:
+            all_boxes_cache_this = cPickle.load(f)
+        print 'all_boxes_cache_this: ', len(all_boxes_cache_this), len(all_boxes_cache_this[0])
+        print 'all_boxes_cache_this[0][0]: ', all_boxes_cache_this[0][0].shape
+        # print 'all_boxes_cache_this[0][0][0]: ', all_boxes_cache_this[0][0][0]
+        # print 'all_boxes_cache_this[14][0]: ', all_boxes_cache_this[14][0].shape
+        # print 'all_boxes_cache_this[14][0][0]: ',
+        # all_boxes_cache_this[14][0][0]
+
+        if all_boxes_cache is None:
+            all_boxes_cache = all_boxes_cache_this
+        else:
+            print 'Sum up all result'
+            print 'If error happen here, it counld be that the dimensions miss match.'
+            for c in xrange(imdb.num_classes):
+                for n in xrange(num_images):
+                    all_boxes_cache[c][n][
+                        :, 4] += all_boxes_cache_this[c][n][:, 4]
+
+    print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
+    print 'all_boxes_cache[0][0]: ', all_boxes_cache[0][0].shape
+    # print 'all_boxes_cache[0][0][0]: ', all_boxes_cache[0][0][0]
+    # print 'all_boxes_cache[14][0]: ', all_boxes_cache[14][0].shape
+    # print 'all_boxes_cache[14][0][0]: ', all_boxes_cache[14][0][0]
+
+    # timers
+    _t = {'im_detect': Timer(), 'misc': Timer()}
+
+    roidb = imdb.roidb
+
+    for i in xrange(num_images):
+        _t['im_detect'].tic()
+        _t['im_detect'].toc()
+
+        _t['misc'].tic()
+        # skip j = 0, because it's the background class
+        # fuck skip
+        for j in xrange(0, imdb.num_classes):
+            # all_scores[j][i] = sum(scores[:, j])
+            all_scores[j][i] = sum(all_boxes_cache[j][i][:, -1])
+
+            # inds = np.where(scores[:, j] > thresh)[0]
+            # cls_scores = scores[inds, j]
+            inds = np.where(all_boxes_cache[j][i][:, -1] > thresh)[0]
+            cls_scores = all_boxes_cache[j][i][inds, -1]
+
+            # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
+            cls_boxes = all_boxes_cache[j][i][inds, 0:4]
+            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+
+            keep = nms(cls_dets, cfg.TEST.NMS)
+            cls_dets = cls_dets[keep, :]
+
+            all_boxes[j][i] = cls_dets
+
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]
@@ -542,112 +669,8 @@ def test_net(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
 
 
-def test_net_ensemble(nets, imdb, max_per_image=100,
-                      thresh=0.0000001, vis=False):
-    print 'max_per_image: ', max_per_image
-    print 'thresh: ', thresh
-
-    num_images = len(imdb.image_index)
-    # all detections are collected into:
-    #    all_boxes[cls][image] = N x 5 array of detections in
-    #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
-    all_scores = [[[] for _ in xrange(num_images)]
-                  for _ in xrange(imdb.num_classes)]
-
-    # load all the detection results
-    all_boxes_cache = None
-    for net in nets:
-        output_dir = get_output_dir(imdb, net)
-        if cfg.OPG_DEBUG:
-            vis_dir = get_vis_dir(imdb, net)
-
-        det_file = os.path.join(output_dir, 'detections.pkl')
-        if not os.path.isfile(det_file):
-            print 'file not exists: ', det_file
-            # we make sure all region all left
-            origin_NMS = cfg.TEST.NMS
-            cfg.TEST.NMS = 1.1
-            test_net(net, imdb, max_per_image=9999, thresh=0.0000, vis=False)
-            cfg.TEST.NMS = origin_NMS
-
-        with open(det_file, 'rb') as f:
-            all_boxes_cache_this = cPickle.load(f)
-        print 'all_boxes_cache_this: ', len(all_boxes_cache_this), len(all_boxes_cache_this[0])
-        print 'all_boxes_cache_this[0][0]: ', all_boxes_cache_this[0][0].shape
-        print 'all_boxes_cache_this[14][0]: ', all_boxes_cache_this[14][0].shape
-
-        print 'Sum up all result'
-        print 'If error happen here, it counld be that the dimensions miss match.'
-        if all_boxes_cache is None:
-            all_boxes_cache = all_boxes_cache_this
-        else:
-            all_boxes_cache += all_boxes_cache_this
-
-    # timers
-    _t = {'im_detect': Timer(), 'misc': Timer()}
-
-    roidb = imdb.roidb
-
-    test_scales = cfg.TEST.SCALES
-    save_id = 0
-    for i in xrange(num_images):
-        _t['im_detect'].tic()
-        _t['im_detect'].toc()
-
-        _t['misc'].tic()
-        # skip j = 0, because it's the background class
-        # fuck skip
-        for j in xrange(0, imdb.num_classes):
-            # all_scores[j][i] = sum(scores[:, j])
-            all_scores[j][i] = sum(all_boxes_cache[j][i][:, -1])
-            # print all_scores[j][i]
-
-            # inds = np.where(scores[:, j] > thresh)[0]
-            # cls_scores = scores[inds, j]
-            inds = np.where(all_boxes_cache[j][i][:, -1] > thresh)[0]
-            cls_scores = all_boxes_cache[j][i][inds, -1]
-
-            # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
-            cls_boxes = all_boxes_cache[j][i][inds, 0:4]
-            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
-                .astype(np.float32, copy=False)
-
-            if vis:
-                vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
-
-            keep = nms(cls_dets, cfg.TEST.NMS)
-            cls_dets = cls_dets[keep, :]
-
-            # if vis:
-            # vis_detections(im, imdb.classes[j], cls_dets, thresh=thresh)
-            all_boxes[j][i] = cls_dets
-
-        if vis:
-            import matplotlib.pyplot as plt
-            # plt.show()
-            plt.close('all')
-        # Limit to max_per_image detections *over all classes*
-        if max_per_image > 0:
-            image_scores = np.hstack([all_boxes[j][i][:, -1]
-                                      for j in xrange(0, imdb.num_classes)])
-            if len(image_scores) > max_per_image:
-                image_thresh = np.sort(image_scores)[-max_per_image]
-                for j in xrange(0, imdb.num_classes):
-                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
-                    all_boxes[j][i] = all_boxes[j][i][keep, :]
-        _t['misc'].toc()
-
-        print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
-            .format(i + 1, num_images, _t['im_detect'].average_time,
-                    _t['misc'].average_time)
-
-    print 'Evaluating detections'
-    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
-
-
-def test_net_cache(net, imdb, max_per_image=1000, thresh=0.000001, vis=False):
+def test_net_cache(net, imdb, max_per_image=1000,
+                   thresh=0.00000001, vis=False):
     """Test a network on an image database."""
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh
@@ -741,7 +764,7 @@ def test_net_cache(net, imdb, max_per_image=1000, thresh=0.000001, vis=False):
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
 
 
-def test_net_bbox(net, imdb, max_per_image=100, thresh=0.0001, vis=False):
+def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
     """Test a network on an image database."""
     num_images = len(imdb.image_index)
     # all detections are collected into:

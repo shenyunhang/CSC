@@ -10,8 +10,9 @@
 """Test a Fast R-CNN network on an image database."""
 
 import _init_paths
-from cpg.test import test_net_ensemble
-from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list
+from wsl.test import test_net, test_net_cache, test_net_bbox
+from wsl.config import cfg_wsl
+from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 from datasets.factory import get_imdb
 import caffe
 import argparse
@@ -35,7 +36,7 @@ def parse_args():
                         default=None, type=str)
     parser.add_argument('--net', dest='caffemodel',
                         help='model to test',
-                        default=None, nargs='+')
+                        default=None, type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file', default=None, type=str)
     parser.add_argument('--wait', dest='wait',
@@ -68,6 +69,7 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
+    cfg_basic_generation(cfg_wsl)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
@@ -78,27 +80,47 @@ if __name__ == '__main__':
     print('Using config:')
     pprint.pprint(cfg)
 
-    nets = []
-    print args.caffemodel
-    for caffemodel in args.caffemodel:
-        if not os.path.exists(caffemodel) and args.wait:
-            while not os.path.exists(caffemodel) and args.wait:
-                current_time = time.strftime(
-                    "%Y-%m-%d %H:%M", time.localtime())
-                print('{}: waiting for {} to exist...'.format(
-                    current_time, caffemodel))
-                time.sleep(60 * 30)
-            time.sleep(60 * 5)
+    if not os.path.exists(args.caffemodel) and args.wait:
+        while not os.path.exists(args.caffemodel) and args.wait:
+            current_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+            print('{}: waiting for {} to exist...'.format(
+                current_time, args.caffemodel))
+            time.sleep(60 * 30)
+        time.sleep(60 * 5)
 
-        caffe.set_mode_gpu()
-        caffe.set_device(args.gpu_id)
-        net = caffe.Net(args.prototxt, caffemodel, caffe.TEST)
-        net.name = os.path.splitext(os.path.basename(caffemodel))[0]
-        nets.append(net)
+    caffe.set_mode_gpu()
+    caffe.set_device(args.gpu_id)
+    net = caffe.Net(args.prototxt, args.caffemodel, caffe.TEST)
+    net.name = os.path.splitext(os.path.basename(args.caffemodel))[0]
 
     imdb = get_imdb(args.imdb_name)
     imdb.competition_mode(args.comp_mode)
     imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
 
-    test_net_ensemble(
-        nets, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    if cfg.TEST.BBOX:
+        test_net_bbox(
+            net, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    elif cfg.TEST.GRID_SEARCH:
+        result = []
+        nmses = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        threshs = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8]
+        max_per_images = [1e0, 1e1, 1e2, 1e3, 1e4]
+
+        for nms in nmses:
+            cfg.TEST.NMS = nms
+            for thresh in threshs:
+                for max_per_image in max_per_images:
+                    print nms, thresh, max_per_image
+                    test_net_cache(
+                        net, imdb, max_per_image=max_per_image, thresh=thresh)
+                    result.append([nms, thresh, max_per_image, cfg.TEST.MAP])
+        print result
+        f = open('grid_search.csv', 'wb')
+        wr = csv.writer(f, dialect='excel')
+        wr.writerows(result)
+
+    elif cfg.TEST.CACHE:
+        test_net_cache(
+            net, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    else:
+        test_net(net, imdb, max_per_image=args.max_per_image, vis=args.vis)

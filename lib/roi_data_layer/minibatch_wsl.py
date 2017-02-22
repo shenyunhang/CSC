@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -14,7 +16,7 @@ import os
 from configure import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
 import datasets.ds_utils
-import cpg.cpg_utils
+import wsl.wsl_utils
 import pdb
 
 
@@ -27,6 +29,7 @@ def get_minibatch(roidb, num_classes, db_inds):
     # rois_per_image = cfg.TRAIN.ROIS_PER_IM
 
     # Get the input image blob, formatted for caffe
+    # im_crops is define as RoIs with form (y1,x1,y2,x2)
     im_blob, im_scales, im_crops, im_shapes = _get_image_blob(
         roidb, random_scale_inds, db_inds)
 
@@ -53,8 +56,8 @@ def get_minibatch(roidb, num_classes, db_inds):
 
         im_crop = im_crops[i_im]
 
-        # TODO(YH): CROP is conflict with OPG_CACHE and ROI_AU
-        # abandon RoIs, which not in CROP
+        # TODO(YH): CROP is conflict with OPG_CACHE and ROI_AU, thereforce caffe should check the validity of RoI
+        # 删除超出CROP的RoI
         # drop = (im_rois[:, 0] >= im_crop[2]) | (im_rois[:, 1] >= im_crop[3]) | (
         # im_rois[:, 2] <= im_crop[0]) | (im_rois[:, 3] <= im_crop[1])
         # im_rois = im_rois[~drop]
@@ -62,7 +65,8 @@ def get_minibatch(roidb, num_classes, db_inds):
         # im_roi_scores = im_roi_scores[~drop]
 
         # Check RoI
-        datasets.ds_utils.validate_boxes(im_rois, width=im_shapes[i_im][1], height=im_shapes[i_im][0]):
+        datasets.ds_utils.validate_boxes(im_rois, width=im_shapes[i_im][
+                                         1], height=im_shapes[i_im][0])
 
         rois_per_this_image = np.minimum(
             cfg.TRAIN.ROIS_PER_IM, im_rois.shape[0])
@@ -242,13 +246,16 @@ def _get_image_blob(roidb, scale_inds, db_inds):
             s = im_shape[:2] - crop_dims
             s[0] *= r0
             s[1] *= r1
-            im_crop = np.array(
-                [s[0], s[1], s[0] + crop_dims[0], s[1] + crop_dims[1]], dtype=np.uint16)
+            im_crop = np.array([s[0],
+                                s[1],
+                                s[0] + crop_dims[0] - 1,
+                                s[1] + crop_dims[1] - 1],
+                               dtype=np.uint16)
 
-            im = im[im_crop[0]:im_crop[2], im_crop[1]:im_crop[3], :]
+            im = im[im_crop[0]:im_crop[2] + 1, im_crop[1]:im_crop[3] + 1, :]
         else:
             im_crop = np.array(
-                [0, 0, im.shape[0], im.shape[1]], dtype=np.uint16)
+                [0, 0, im.shape[0] - 1, im.shape[1] - 1], dtype=np.uint16)
 
         if cfg.OPG_DEBUG:
             im_save = im
@@ -325,6 +332,7 @@ def _project_im_rois(im_rois, im_scale_factor, im_crop):
     crop = np.tile(im_crop[:2], [im_rois.shape[0], 2])
     rois = (im_rois - crop) * im_scale_factor
 
+    # TODO(YH): 为什么大部分RoI会被caffe抛弃
     return rois
 
 

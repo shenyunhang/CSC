@@ -25,7 +25,7 @@ from easydict import EasyDict as edict
 __C = edict()
 # Consumers can get config by:
 #   from cpg.config import cfg_cpg
-cfg_cpg = __C
+cfg_wsl = __C
 
 #
 # Training options
@@ -47,7 +47,7 @@ __C.TRAIN.IMS_PER_BATCH = 2
 # Minibatch size (number of regions of interest [ROIs])
 __C.TRAIN.BATCH_SIZE = 128
 
-__C.TRAIN.ROIS_PER_IM = 2048
+__C.TRAIN.ROIS_PER_IM = 10000
 
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
@@ -116,7 +116,6 @@ __C.TEST.PROPOSAL_METHOD = 'selective_search'
 
 __C.TEST.ROIS_PER_IM = 10000
 __C.TEST.USE_FLIPPED = True
-__C.TEST.CORLOC = False
 __C.TEST.BBOX = False
 
 # for grid search NMS max_per_image thresh and so on

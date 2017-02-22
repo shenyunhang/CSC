@@ -8,11 +8,9 @@ GPU_ID=$1
 NET=$2
 DATASET=$3
 
-CFG=$4
-
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:4:$len}
+EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 is_next=false
@@ -51,6 +49,15 @@ do
 	NET_PREFIX="${NET}_iter_${ITERS}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/test_cpg.sh $1 $2 $3 ${NET_PREFIX} $4 ${EXTRA_ARGS}
+		./experiments/scripts/cpg_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+	fi
+done
+
+for((ITERS=1;ITERS<=20;ITERS++))
+do
+	NET_PREFIX="${NET}_2_iter_${ITERS}"
+	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
+	then
+		./experiments/scripts/cpg_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done

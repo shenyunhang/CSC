@@ -7,15 +7,25 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 NET=$2
 DATASET=$3
-CFG=$4
-
-
-EXP_DIR=$7
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:4:$len}
+EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
+
+is_next=false
+for var in "$@"
+do
+	if ${is_next}
+	then
+		EXP_DIR=${var}
+		break
+	fi
+	if [ ${var} == "EXP_DIR" ]
+	then
+		is_next=true
+	fi
+done
 
 case $DATASET in
 	pascal_voc)
@@ -23,6 +33,7 @@ case $DATASET in
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
 		ITERS=20
+		ITERS2=20
 		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
@@ -37,7 +48,7 @@ case $DATASET in
 esac
 
 mkdir -p "experiments/logs/${EXP_DIR}"
-LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${CFG}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
+LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
 LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
@@ -53,15 +64,16 @@ then
 	echo showing the solver file:
 	cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
 	echo ---------------------------------------------------------------------
-	time ./tools/train_net_cpg.py --gpu ${GPU_ID} \
+	time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
 		--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
 		--weights data/imagenet_models/${NET}.v2.caffemodel \
 		--imdb ${TRAIN_IMDB} \
 		--iters ${ITERS} \
-		--cfg experiments/cfgs/${CFG} \
+		--cfg experiments/cfgs/cpg.yml \
 		${EXTRA_ARGS}
 
 		#--weights output/vgg16_cpg_/voc_2007_trainval/VGG16_iter_.caffemodel \
+		#--weights output/vgg_cnn_m_1024_cpg_/voc_2007_trainval/VGG_CNN_M_1024_iter_.caffemodel \
 		#--weights data/imagenet_models/${NET}.v2.caffemodel \
 fi
 
@@ -71,42 +83,12 @@ then
 	echo showing the solver file:
 	cat "models/${PT_DIR}/${NET}/cpg/solver2.prototxt"
 	echo ---------------------------------------------------------------------
-	time ./tools/train_net_cpg.py --gpu ${GPU_ID} \
+	time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
 		--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
 		--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel \
 		--imdb ${TRAIN_IMDB} \
-		--iters ${ITERS} \
-		--cfg experiments/cfgs/${CFG} \
-		${EXTRA_ARGS}
-fi
-
-if [ -f "models/${PT_DIR}/${NET}/cpg/solver3.prototxt" ]
-then
-	echo ---------------------------------------------------------------------
-	echo showing the solver file:
-	cat "models/${PT_DIR}/${NET}/cpg/solver3.prototxt"
-	echo ---------------------------------------------------------------------
-	time ./tools/train_net_cpg.py --gpu ${GPU_ID} \
-		--solver models/${PT_DIR}/${NET}/cpg/cpg/solver3.prototxt \
-		--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS}.caffemodel \
-		--imdb ${TRAIN_IMDB} \
-		--iters ${ITERS} \
-		--cfg experiments/cfgs/${CFG} \
-		${EXTRA_ARGS}
-fi
-
-if [ -f "models/${PT_DIR}/${NET}/cpg/solver4.prototxt" ]
-then
-	echo ---------------------------------------------------------------------
-	echo showing the solver file:
-	cat "models/${PT_DIR}/${NET}/cpg/solver4.prototxt"
-	echo ---------------------------------------------------------------------
-	time ./tools/train_net_cpg.py --gpu ${GPU_ID} \
-		--solver models/${PT_DIR}/${NET}/cpg/solver4.prototxt \
-		--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_3_iter_${ITERS}.caffemodel \
-		--imdb ${TRAIN_IMDB} \
-		--iters ${ITERS} \
-		--cfg experiments/cfgs/${CFG} \
+		--iters ${ITERS2} \
+		--cfg experiments/cfgs/cpg.yml \
 		${EXTRA_ARGS}
 fi
 
@@ -115,10 +97,9 @@ set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
 set -x
 
-time ./tools/test_net_cpg.py --gpu ${GPU_ID} \
+time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
 	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/${CFG} \
+	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS}
-

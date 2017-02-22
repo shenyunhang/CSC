@@ -11,8 +11,8 @@
 
 import _init_paths
 from fast_rcnn.train import get_training_roidb
-from cpg.train import train_net
-from cpg.config import cfg_cpg
+from wsl.train import train_net
+from wsl.config import cfg_wsl
 from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 from configure import get_output_dir,get_vis_dir
 from datasets.factory import get_imdb
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
-    cfg_basic_generation(cfg_cpg)
+    cfg_basic_generation(cfg_wsl)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:

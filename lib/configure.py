@@ -30,7 +30,10 @@ cfg = __C
 __C.WSL = False
 
 __C.USE_PSEUDO = False
-__C.PSEUDO_PATH = 'output/vgg16_cpg_0206/voc_2007_test/VGG16_iter_20/detections.pkl'
+__C.PSEUDO_PATH = 'output/cpg/voc_2007_trainval/detections.pkl'
+# __C.PSEUDO_PATH = 'output/vgg16_fast_rcnn_wsl_0313/voc_2007_trainval/vgg16_fast_rcnn_iter_40000/detections_o.pkl'
+
+__C.DRAW=False
 
 
 def get_vis_dir(imdb, net=None):

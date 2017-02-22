@@ -12,7 +12,7 @@ RoIDataLayer implements a Caffe Python layer.
 
 import caffe
 from configure import cfg
-from roi_data_layer.minibatch_cpg import get_minibatch
+from roi_data_layer.minibatch_wsl import get_minibatch
 import numpy as np
 import yaml
 from multiprocessing import Process, Queue

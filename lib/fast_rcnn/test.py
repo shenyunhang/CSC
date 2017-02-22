@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -8,7 +9,6 @@
 """Test a Fast R-CNN network on an imdb (image database)."""
 
 from configure import cfg, get_output_dir
-from configure import get_vis_dir
 from fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
 import argparse
 from utils.timer import Timer
@@ -243,9 +243,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
     all_boxes = [[[] for _ in xrange(num_images)]
                  for _ in xrange(imdb.num_classes)]
 
+    all_boxes_o = [[[] for _ in xrange(num_images)]
+                   for _ in xrange(imdb.num_classes)]
+
     output_dir = get_output_dir(imdb, net)
-    if cfg.OPG_DEBUG:
-        vis_dir = get_vis_dir(imdb, net)
 
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}
@@ -253,7 +254,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
     if not cfg.TEST.HAS_RPN:
         roidb = imdb.roidb
 
-    save_id = 0
     for i in xrange(num_images):
         # filter out any ground truth boxes
         if cfg.TEST.HAS_RPN:
@@ -268,25 +268,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
 
         im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
-
-        if cfg.OPG_DEBUG:
-            save_path = os.path.join(
-                vis_dir, str(save_id) + '_.png')
-            target_size=cfg.TEST.SCALES[0]
-
-            im_shape = im.shape
-            im_size_min = np.min(im_shape[0:2])
-            im_size_max = np.max(im_shape[0:2])
-
-            im_scale = float(target_size) / float(im_size_min)
-            # Prevent the biggest axis from being more than MAX_SIZE
-            if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
-                im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-            im_save = cv2.resize(im, None, None, fx=im_scale, fy=im_scale,
-                                 interpolation=cv2.INTER_LINEAR)
-            cv2.imwrite(save_path, im_save)
-            save_id += 1
-
         scores, boxes = im_detect(net, im, box_proposals)
         _t['im_detect'].toc()
 
@@ -304,10 +285,13 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
                 vis_detections(im, imdb.classes[j], cls_dets)
             all_boxes[j][i] = cls_dets
 
-        if vis:
-            import matplotlib.pyplot as plt
-            # plt.show()
-            plt.close('all')
+            # 保留原始检测结果
+            cls_scores_o = scores[:, j]
+            cls_boxes_o = boxes[:, j * 4:(j + 1) * 4]
+            cls_dets_o = np.hstack((cls_boxes_o, cls_scores_o[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+            all_boxes_o[j][i] = cls_dets_o
+
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]
@@ -326,6 +310,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
     det_file = os.path.join(output_dir, 'detections.pkl')
     with open(det_file, 'wb') as f:
         cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
+
+    det_file_o = os.path.join(output_dir, 'detections_o.pkl')
+    with open(det_file_o, 'wb') as f:
+        cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir)

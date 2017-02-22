@@ -8,11 +8,10 @@ GPU_ID=$1
 NET=$2
 DATASET=$3
 ITERS=$4
-CFG=$5
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:5:$len}
+EXTRA_ARGS=${array[@]:4:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 is_next=false
@@ -47,7 +46,7 @@ case $DATASET in
 esac
 
 mkdir -p "experiments/logs/${EXP_DIR}"
-LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${ITERS}_${CFG}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
+LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${ITERS}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
 LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
@@ -59,9 +58,9 @@ echo ---------------------------------------------------------------------
 
 NET_FINAL=output/${EXP_DIR}/${TRAIN_IMDB}/${ITERS}.caffemodel
 
-time ./tools/test_net_cpg.py --gpu ${GPU_ID} \
-	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
+	--def models/${PT_DIR}/${NET}/cpg/test_debug.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/${CFG} \
-	${EXTRA_ARGS}
+	--cfg experiments/cfgs/cpg.yml \
+	${EXTRA_ARGS} OPG_DEBUG True

@@ -84,6 +84,9 @@ class SolverWrapper(object):
             (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)
         self.steps_snapshot = (cfg.TRAIN.SNAPSHOT_ITERS * self.train_ims_num) / \
             (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)
+        if cfg.TRAIN.USE_FLIPPED:
+            self.steps_num /= 2
+            self.steps_snapshot /= 2
         print 'steps_num: ', self.steps_num
         print 'steps_snapshot: ', self.steps_snapshot
         while self.solver.iter < self.steps_num:

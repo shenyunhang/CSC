@@ -11,7 +11,9 @@
 
 import _init_paths
 from fast_rcnn.train import get_training_roidb, train_net
-from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+from fast_rcnn.config import cfg_fast_rcnn
+from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
+from configure import get_output_dir,get_vis_dir
 from datasets.factory import get_imdb
 import datasets.imdb
 import caffe
@@ -82,6 +84,7 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
+    cfg_basic_generation(cfg_fast_rcnn)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
