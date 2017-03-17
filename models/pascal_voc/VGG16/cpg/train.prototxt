@@ -140,7 +140,7 @@ layer { name: "cls_neg" type: "GeneralPooling" bottom: "score_neg" top: "cls_neg
 #-----------------------------------LOSS----------------------------------------------------------------------
 layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "labels_pos" top: "loss_pos" loss_weight: 1
 	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
-layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 1
+layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 0
 	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
 layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"

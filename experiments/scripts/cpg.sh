@@ -32,7 +32,7 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=20
+		ITERS=10
 		ITERS2=20
 		;;
 	coco)

@@ -42,6 +42,13 @@ class pascal_voc(imdb):
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
+
+        # remove some training data
+        if cfg.TRAIN.LEFT < 1.0:
+            self._remove_ims()
+        else:
+            print 'using all image'
+
         # Default to roidb handler
         self._roidb_handler = self.selective_search_roidb
         self._salt = str(uuid.uuid4())
@@ -63,6 +70,21 @@ class pascal_voc(imdb):
 
         self._gt_classes = {ix: self._load_pascal_classes_annotation(
             ix) for ix in self._image_index}
+
+    def _remove_ims(self):
+        self._image_index_old = self._image_index
+        self._image_index = []
+        self._image_left = []
+        for index in self._image_index_old:
+            r = np.random.random()
+            if r <= cfg.TRAIN.LEFT:
+                self._image_index.append(index)
+                self._image_left.append(1)
+            else:
+                self._image_left.append(0)
+
+        print 'original image number: ', len(self._image_index_old)
+        print 'left image number:', len(self._image_index)
 
     def image_classes_at(self, i):
         """
@@ -939,8 +961,8 @@ class pascal_voc(imdb):
         for i, cls in enumerate(self._classes):
             if cls == '__background__':
                 continue
-            # output_sub_dir = os.path.join(output_dir, cls)
-            output_sub_dir = output_dir
+            output_sub_dir = os.path.join(output_dir, cls)
+            # output_sub_dir = output_dir
             if not os.path.isdir(output_sub_dir):
                 os.mkdir(output_sub_dir)
             filename = self._get_voc_results_file_template().format(cls)

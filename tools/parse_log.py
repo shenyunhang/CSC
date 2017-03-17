@@ -158,10 +158,13 @@ def parse_log(logs, output_dir):
         plt.savefig(os.path.join(output_dir, key + '.png'))
 
 
-def traversal(rootdir):
+def traversal(rootdir, framework, model):
     logs = dict()
-    regex_train = re.compile('train.+\.log')
-    regex_test = re.compile('test.+_iter_(\d+).+\.log')
+    # regex_train = re.compile('train.+\.log')
+    regex_train = re.compile('{}.sh_{}.+\.log'.format(framework, model))
+    # regex_train = re.compile('^((?!test).)*\.log')
+    regex_test = re.compile(
+        '{}_test.sh_{}_{}_iter_(\d+).+\.log'.format(framework, model, model))
 
     # 三个参数：分别返回1.父目录 2.所有文件夹名字（不含路径） 3.所�  文件名字
     for parent, dirnames, filenames in os.walk(rootdir):
@@ -194,18 +197,20 @@ def traversal(rootdir):
 
 
 def parse_args():
-    description = ('Parse a Caffe training log into two CSV files '
+    description = ('Parse a Caffe training log '
                    'containing training and testing information')
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument('log_dir',
                         help='Directory in which stored log files')
 
-    # parser.add_argument('path_to_png',
-    # help='Path to png file')
-
     parser.add_argument('output_dir',
-                        help='Directory in which to place output CSV files')
+                        help='Directory in which to place output files')
+
+    parser.add_argument('framework',
+                        help='framework name')
+    parser.add_argument('model',
+                        help='model name')
 
     parser.add_argument('--verbose',
                         action='store_true',
@@ -223,7 +228,7 @@ def parse_args():
 def main():
     args = parse_args()
     pprint.pprint(args)
-    logs = traversal(args.log_dir)
+    logs = traversal(args.log_dir, args.framework, args.model)
     parse_log(logs, args.output_dir)
 
 if __name__ == '__main__':
