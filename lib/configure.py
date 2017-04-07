@@ -33,7 +33,8 @@ __C.USE_PSEUDO = False
 __C.PSEUDO_PATH = 'output/cpg/voc_2007_trainval/detections.pkl'
 # __C.PSEUDO_PATH = 'output/vgg16_fast_rcnn_wsl_0313/voc_2007_trainval/vgg16_fast_rcnn_iter_40000/detections_o.pkl'
 
-__C.DRAW=False
+__C.GENERATE_ROI = False
+__C.LEFT = 1.0
 
 
 def get_vis_dir(imdb, net=None):
@@ -106,7 +107,7 @@ def _merge_a_into_b(a, b):
         if isinstance(v, edict):
             try:
                 _merge_a_into_b(a[k], b[k])
-            except:
+            except BaseException:
                 print('Error under config key: {}'.format(k))
                 raise
         else:
@@ -136,8 +137,7 @@ def cfg_from_list(cfg_list):
         assert subkey in d
         try:
             value = literal_eval(v)
-        except:
-            # handle the case when v is a string literal
+        except BaseException:            # handle the case when v is a string literal
             value = v
         assert isinstance(value, type(d[subkey])), \
             'type {} does not match original type {}'.format(

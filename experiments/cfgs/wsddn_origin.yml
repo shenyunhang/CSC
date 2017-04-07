@@ -4,20 +4,20 @@ TRAIN:
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
         USE_CROP: True
-        USE_DISTORTION: True
+        USE_DISTORTION: False
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
-        PROPOSAL_METHOD: mcg
+        PROPOSAL_METHOD: edge_boxes
         ASPECT_GROUPING: False
         OPG_CACHE: False
 
 TEST:
         SCALES: [480, 576, 688, 864, 1200]
         MAX_SIZE: 2000
-        NMS: 0.5
-        PROPOSAL_METHOD: mcg
+        NMS: 0.4
+        PROPOSAL_METHOD: edge_boxes
 RNG_SEED: 6
-EXP_DIR: wsddn
+EXP_DIR: wsddn_origin
 CONTEXT: False
 USE_ROI_SCORE: True
 USE_BG: False

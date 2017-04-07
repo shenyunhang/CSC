@@ -40,7 +40,7 @@ layer { name: "conv4_1" type: "Convolution" bottom: "pool3" top: "conv4_1"
 	convolution_param { num_output: 512  pad: 1 kernel_size: 3 }}
 layer { name: "relu4_1" type: "ReLU" bottom: "conv4_1" top: "conv4_1" }
 layer { name: "conv4_2" type: "Convolution" bottom: "conv4_1" top: "conv4_2"
-  	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
+	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
 	convolution_param { num_output: 512 pad: 1 kernel_size: 3 }}
 layer { name: "relu4_2" type: "ReLU" bottom: "conv4_2" top: "conv4_2" }
 layer { name: "conv4_3" type: "Convolution" bottom: "conv4_2" top: "conv4_3"
@@ -65,6 +65,8 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
+#layer { name: "roi_pool_conv5" type: "ROIAlign" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
+#	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
 #------------------------------------ROI SCORE BOOSTING-------------------------------------------------------
 layer { name: "boost" type: "Scale" bottom: "roi_pool_conv5" bottom: "roi_scores" top: "boost"

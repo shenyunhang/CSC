@@ -52,6 +52,8 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
+#layer { name: "roi_pool_conv5" type: "ROIAlign" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
+#	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
 #------------------------------------ROI SCORE BOOSTING-------------------------------------------------------
 layer { name: "boost" type: "Scale" bottom: "roi_pool_conv5" bottom: "roi_scores" top: "boost"
@@ -90,10 +92,10 @@ layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_
 	general_pooling_param { pool: SUM axis: 0 }}
 
 #layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
-	#propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+#	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
 #layer { name: "loss_feature" type: "SmoothFeatureLoss" bottom: "fc7" bottom: "rois" bottom: "bbox_score" bottom: "labels"
-	#top: "loss_feature" loss_weight: 0.001 smooth_feature_loss_param { debug_info: false }}
+#	top: "loss_feature" loss_weight: 0.001 smooth_feature_loss_param { debug_info: false }}
 
 #-----------------------------------CPG-----------------------------------------------------------------------
 layer { name: "mil" type: "MIL" bottom: "cls_score" bottom: "cls_score" bottom: "rois" bottom: "bbox_score"

@@ -44,7 +44,7 @@ class pascal_voc(imdb):
         self._image_index = self._load_image_set_index()
 
         # remove some training data
-        if cfg.TRAIN.LEFT < 1.0:
+        if 'test' not in self._name and cfg.LEFT < 1.0:
             self._remove_ims()
         else:
             print 'using all image'
@@ -77,7 +77,7 @@ class pascal_voc(imdb):
         self._image_left = []
         for index in self._image_index_old:
             r = np.random.random()
-            if r <= cfg.TRAIN.LEFT:
+            if r <= cfg.LEFT:
                 self._image_index.append(index)
                 self._image_left.append(1)
             else:
@@ -467,7 +467,7 @@ class pascal_voc(imdb):
         else:
             raise Exception('Not implement mode.')
 
-        if cfg.DRAW:
+        if cfg.GENERATE_ROI:
             gt_roidb = self.gt_roidb()
             roidb = self._general_roidb(gt_roidb)
 
@@ -850,6 +850,11 @@ class pascal_voc(imdb):
         print('-- Thanks, The Management')
         print('--------------------------------------------------------------')
 
+        print('Results:')
+        for ap in aps:
+            print('{:.2f}\t'.format(ap * 100.0)),
+        print('{:.2f}'.format(np.mean(aps) * 100.0))
+
         cfg.TEST.MAP = np.mean(aps)
 
     def _do_python_eval_corloc(self, output_dir='output'):
@@ -896,6 +901,11 @@ class pascal_voc(imdb):
         print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
         print('-- Thanks, The Management')
         print('--------------------------------------------------------------')
+
+        print('Results:')
+        for corloc in corlocs:
+            print('{:.2f}\t'.format(corloc * 100.0)),
+        print('{:.2f}'.format(np.mean(corlocs) * 100.0))
 
         cfg.TEST.MAP = np.mean(corlocs)
 
@@ -968,6 +978,7 @@ class pascal_voc(imdb):
             filename = self._get_voc_results_file_template().format(cls)
             voc_eval_visualization(
                 filename, annopath, imagesetfile, cls, cachedir, image_path, output_sub_dir)
+
 
 if __name__ == '__main__':
     from datasets.pascal_voc import pascal_voc

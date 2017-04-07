@@ -561,9 +561,9 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
     with open(det_file, 'wb') as f:
         cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
 
-    det_file_o = os.path.join(output_dir, 'detections_o.pkl')
-    with open(det_file_o, 'wb') as f:
-        cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
+    # det_file_o = os.path.join(output_dir, 'detections_o.pkl')
+    # with open(det_file_o, 'wb') as f:
+        # cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)

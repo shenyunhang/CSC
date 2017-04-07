@@ -368,6 +368,7 @@ layer {
 layer {
   name: "roi_pool5"
   type: "ROIPooling"
+#  type: "ROIAlign"
   bottom: "conv5_3"
   bottom: "rois"
   top: "pool5"

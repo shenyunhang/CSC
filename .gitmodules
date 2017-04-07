@@ -4,4 +4,5 @@
 	branch = fast-rcnn
 [submodule "caffe-wsl"]
 	path = caffe-wsl
-	url = git@121.192.180.179:~/caffe-wsl.git
+	url = https://shenyunhang@bitbucket.org/shenyunhang/caffe-wsl.git
+	branch = wsl

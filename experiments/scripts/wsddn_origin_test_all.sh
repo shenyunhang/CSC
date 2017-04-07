@@ -32,8 +32,6 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=10
-		ITERS2=10
 		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
@@ -46,20 +44,20 @@ case $DATASET in
 		;;
 esac
 
-for((ITER=1;ITER<=ITERS;ITER++))
+for((ITERS=1;ITERS<=10;ITERS++))
 do
-	NET_PREFIX="${NET}_iter_${ITER}"
+	NET_PREFIX="${NET}_iter_${ITERS}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/cpg_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+		./experiments/scripts/wsddn_origin_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done
 
-for((ITER=1;ITER<=ITERS2;ITER++))
+for((ITERS=1;ITERS<=10;ITERS++))
 do
-	NET_PREFIX="${NET}_2_iter_${ITER}"
+	NET_PREFIX="${NET}_2_iter_${ITERS}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/cpg_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+		./experiments/scripts/wsddn_origin_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done
