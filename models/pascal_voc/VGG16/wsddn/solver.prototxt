@@ -1,8 +1,8 @@
 train_net: "models/pascal_voc/VGG16/wsddn/train.prototxt"
-base_lr: 0.01
+base_lr: 0.001
 lr_policy: "step"
 gamma: 0.1
-stepsize: 782
+stepsize: 7820
 display: 10
 average_loss: 10
 momentum: 0.9

@@ -5,6 +5,6 @@ VOCdevkit*
 cache
 
 edge_boxes_data*
-MCG-Pascal-Main_trainvaltest_2007-boxes*
 faster_rcnn_models*
+*.tgz
 *.mat

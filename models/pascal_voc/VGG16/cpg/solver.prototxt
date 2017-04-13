@@ -12,6 +12,6 @@ weight_decay: 0.0005
 snapshot: 0
 # We still use the snapshot prefix, though
 snapshot_prefix: "VGG16"
-# debug_info: true
+#debug_info: true
 
 iter_size: 128

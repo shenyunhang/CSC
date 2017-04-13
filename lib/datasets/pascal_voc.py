@@ -566,7 +566,7 @@ class pascal_voc(imdb):
                 print '{:d} / {:d}'.format(i + 1, len(self._image_index))
 
             box_file = os.path.join(
-                cfg.DATA_DIR, 'MCG-Pascal-Main_trainvaltest_2007-boxes', '{}.mat'.format(index))
+                cfg.DATA_DIR, 'MCG-Pascal-Main_trainvaltest_{}-boxes'.format(self._year), '{}.mat'.format(index))
 
             raw_data = sio.loadmat(box_file)['boxes']
             score_data = sio.loadmat(box_file)['scores']
