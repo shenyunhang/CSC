@@ -344,6 +344,40 @@ def vis_heatmap(im, im_ind, class_name, dets, thresh=0.3):
         plt.savefig(sv_path)
 
 
+def vis_detections_highest(im, class_name, dets, thresh=0.3):
+    """Visual debugging of detections."""
+    import matplotlib.pyplot as plt
+
+    im = im[:, :, (2, 1, 0)]
+    score_highest=0
+    highest_id=-1
+    for i in xrange(np.minimum(10, dets.shape[0])):
+        bbox = dets[i, :4]
+        score = dets[i, -1]
+        if score > thresh:
+            if score > score_highest:
+                score_highest=score
+                highest_id=i
+
+    if highest_id==-1:
+        return
+
+    bbox = dets[highest_id, :4]
+    score = dets[highest_id, -1]
+    plt.figure()
+    plt.cla()
+    plt.imshow(im)
+    plt.gca().add_patch(
+        plt.Rectangle((bbox[0], bbox[1]),
+                      bbox[2] - bbox[0],
+                      bbox[3] - bbox[1], fill=False,
+                      edgecolor='g', linewidth=3)
+    )
+    plt.title('{}  {:.3f}'.format(class_name, score))
+    # plt.draw()
+    plt.show(block=False)
+
+
 def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""
     import matplotlib.pyplot as plt
@@ -362,7 +396,7 @@ def vis_detections(im, class_name, dets, thresh=0.3):
                               edgecolor='g', linewidth=3)
             )
             plt.title('{}  {:.3f}'.format(class_name, score))
-            # plt.show()
+            plt.draw()
 
 
 def apply_nms(all_boxes, thresh):
@@ -436,6 +470,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
         # continue
         # if i > 100:
             # break
+        if vis:
+            import matplotlib.pyplot as plt
+            # 关闭所有窗口
+            # plt.close('all')
 
         box_proposals = roidb[i]['boxes']
         rois_per_this_image = min(cfg.TEST.ROIS_PER_IM, len(box_proposals))
@@ -464,9 +502,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
                 scores = scores_scale
                 boxes = boxes_scale
             else:
-                # scores = np.vstack((scores, scores_scale))
-                # boxes = np.vstack((boxes, boxes_scale))
-
                 # TODO(YH): something to do
                 scores += scores_scale
                 assert np.array_equal(
@@ -495,9 +530,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
                 scores_scale, boxes_scale, = im_detect(
                     net, im_flip, box_proposals_flip, box_scores)
 
-                # scores = np.vstack((scores, scores_scale))
-                # boxes = np.vstack((boxes, boxes_scale_o))
-
                 scores += scores_scale
 
                 if cfg.OPG_DEBUG:
@@ -525,7 +557,8 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
             keep = nms(cls_dets, cfg.TEST.NMS)
             cls_dets = cls_dets[keep, :]
             if vis:
-                vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
+                # vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
+                vis_detections_highest(im, imdb.classes[j], cls_dets, thresh=0.3)
             all_boxes[j][i] = cls_dets
 
             # 保留原始检测结果
@@ -535,10 +568,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
                 .astype(np.float32, copy=False)
             all_boxes_o[j][i] = cls_dets_o
 
-        if vis:
-            import matplotlib.pyplot as plt
-            # plt.show()
-            plt.close('all')
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]

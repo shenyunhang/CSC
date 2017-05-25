@@ -14,7 +14,7 @@ from datasets.coco import coco
 import numpy as np
 
 # Set up voc_<year>_<split> using selective search "fast" mode
-for year in ['2007', '2012']:
+for year in ['2007', '2010', '2012']:
     for split in ['train', 'val', 'trainval', 'test']:
         name = 'voc_{}_{}'.format(year, split)
         __sets[name] = (lambda split=split, year=year: pascal_voc(split, year))
@@ -37,11 +37,13 @@ for year in ['2015']:
         name = 'coco_{}_{}'.format(year, split)
         __sets[name] = (lambda split=split, year=year: coco(split, year))
 
+
 def get_imdb(name):
     """Get an imdb (image database) by name."""
-    if not __sets.has_key(name):
+    if name not in __sets:
         raise KeyError('Unknown dataset: {}'.format(name))
     return __sets[name]()
+
 
 def list_imdbs():
     """List all registered imdbs."""

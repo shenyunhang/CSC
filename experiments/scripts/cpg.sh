@@ -35,6 +35,13 @@ case $DATASET in
 		ITERS=10
 		ITERS2=10
 		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		TEST_IMDB="voc_2010_test"
+		PT_DIR="pascal_voc"
+		ITERS=10
+		ITERS2=10
+		;;
 	pascal_voc07+12)
 		TRAIN_IMDB="voc_2007+2012_trainval"
 		TEST_IMDB="voc_2007_test"
