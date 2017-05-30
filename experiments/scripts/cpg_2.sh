@@ -32,14 +32,21 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=10
+		ITERS=20
+		ITERS2=10
+		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		TEST_IMDB="voc_2010_test"
+		PT_DIR="pascal_voc"
+		ITERS=2
 		ITERS2=10
 		;;
 	pascal_voc07+12)
 		TRAIN_IMDB="voc_2007+2012_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=10
+		ITERS=20
 		ITERS2=10
 		;;
 	coco)
@@ -65,28 +72,28 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-echo ---------------------------------------------------------------------
-echo showing the solver file:
-cat "models/${PT_DIR}/${NET}/wsddn/solver.prototxt"
-echo ---------------------------------------------------------------------
-time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
-	--solver models/${PT_DIR}/${NET}/wsddn/solver.prototxt \
-	--weights data/imagenet_models/${NET}.v2.caffemodel \
-	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/wsddn.yml \
-	${EXTRA_ARGS}
+#echo ---------------------------------------------------------------------
+#echo showing the solver file:
+#cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
+#echo ---------------------------------------------------------------------
+#time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
+	#--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
+	#--weights data/imagenet_models/${NET}.v2.caffemodel \
+	#--imdb ${TRAIN_IMDB} \
+	#--iters ${ITERS} \
+	#--cfg experiments/cfgs/cpg.yml \
+	#${EXTRA_ARGS}
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
-cat "models/${PT_DIR}/${NET}/wsddn/solver2.prototxt"
+cat "models/${PT_DIR}/${NET}/cpg/solver2.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
-	--solver models/${PT_DIR}/${NET}/wsddn/solver2.prototxt \
-	--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS2}.caffemodel \
+	--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
+	--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel \
 	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/wsddn.yml \
+	--iters ${ITERS2} \
+	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS}
 
 #--------------------------------------------------------------------------------------------------
@@ -95,8 +102,8 @@ NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | 
 set -x
 
 time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
-	--def models/${PT_DIR}/${NET}/wsddn/test.prototxt \
+	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/wsddn.yml \
+	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS}

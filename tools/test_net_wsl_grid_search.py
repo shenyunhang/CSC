@@ -63,6 +63,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -97,11 +98,21 @@ if __name__ == '__main__':
     imdb.competition_mode(args.comp_mode)
     imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
 
-    if cfg.TEST.BBOX:
-        test_net_bbox(
-            net, imdb, max_per_image=args.max_per_image, vis=args.vis)
-    elif cfg.TEST.CACHE:
-        test_net_cache(
-            net, imdb, max_per_image=args.max_per_image, vis=args.vis)
-    else:
-        test_net(net, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    result = []
+    nmses = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    threshs = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10]
+    max_per_images = [1, 10, 100, 1000, 10000]
+
+    for nms in nmses:
+        cfg.TEST.NMS = nms
+        for thresh in threshs:
+            for max_per_image in max_per_images:
+                print '----------------------------------------------------'
+                print nms, thresh, max_per_image
+                test_net_cache(
+                    net, imdb, max_per_image=max_per_image, thresh=thresh)
+                result.append([nms, thresh, max_per_image, cfg.TEST.MAP])
+    print result
+    f = open('grid_search.csv', 'wb')
+    wr = csv.writer(f, dialect='excel')
+    wr.writerows(result)

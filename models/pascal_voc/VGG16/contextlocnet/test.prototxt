@@ -115,31 +115,5 @@ layer { name: "alpha_cls" type: "Softmax" bottom: "fc8c" top: "alpha_cls" softma
 layer { name: "alpha_det" type: "Softmax" bottom: "fc8d" top: "alpha_det" softmax_param { axis: 0 }}
 
 #-----------------------------------COMBINE-------------------------------------------------------
-layer { name: "bbox_score" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_det" top: "bbox_score"
-	eltwise_param { operation: PROD }}
-
-layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_score"
-	general_pooling_param { pool: SUM axis: 0 }}
-
-#layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
-#	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
-
-#layer { name: "loss_feature" type: "SmoothFeatureLoss" bottom: "fc7" bottom: "rois" bottom: "bbox_score" bottom: "labels"
-#	top: "loss_feature" loss_weight: 0.001 smooth_feature_loss_param { debug_info: false }}
-
-#-----------------------------------CPG-----------------------------------------------------------
-layer { name: "mil" type: "MIL" bottom: "cls_score" bottom: "cls_score" bottom: "rois"
-	top: "opg_roi_select"
-	cpg_param { is_cpg: true mode: CPG_POOLING is_order: false is_contrast: false debug_info: true
-	start_layer_name: "conv1_1" end_layer_name: "cls_score" ignore_label: 20
-	opg_blob_name: "data"
-#	opg_blob_name: "conv1_2"
-#	opg_blob_name: "conv2_2"
-#	opg_blob_name: "conv3_3"
-#	opg_blob_name: "conv4_3"
-#	opg_blob_name: "conv5_3"
-	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
-	mass_threshold: 0.2 density_threshold: 1.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
-
-layer { name: "bbox_prob" type: "Eltwise" bottom: "bbox_score" bottom: "opg_roi_select" top: "bbox_prob"
+layer { name: "bbox_prob" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_det" top: "bbox_prob"
 	eltwise_param { operation: PROD }}

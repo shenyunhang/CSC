@@ -15,6 +15,7 @@ import os
 
 from caffe.proto import caffe_pb2
 import google.protobuf as pb2
+import google.protobuf.text_format
 
 
 class SolverWrapper(object):
@@ -84,9 +85,9 @@ class SolverWrapper(object):
             (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)
         self.steps_snapshot = (cfg.TRAIN.SNAPSHOT_ITERS * self.train_ims_num) / \
             (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)
-        # if cfg.TRAIN.USE_FLIPPED:
-            # self.steps_num /= 2
-            # self.steps_snapshot /= 2
+        if cfg.TRAIN.USE_FLIPPED:
+            self.steps_num /= 2
+            self.steps_snapshot /= 2
 
         # TODO(YH): uncommit for visualization middle model
         # self.steps_snapshot/=2

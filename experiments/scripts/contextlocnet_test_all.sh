@@ -59,7 +59,7 @@ do
 	NET_PREFIX="${NET}_iter_${ITER}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/wsddn_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+		./experiments/scripts/contextlocnet_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done
 
@@ -68,6 +68,6 @@ do
 	NET_PREFIX="${NET}_2_iter_${ITER}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/wsddn_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+		./experiments/scripts/contextlocnet_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done

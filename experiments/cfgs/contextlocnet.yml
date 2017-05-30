@@ -17,8 +17,8 @@ TEST:
         NMS: 0.4
         PROPOSAL_METHOD: edge_boxes
 RNG_SEED: 6
-EXP_DIR: wsddn
-CONTEXT: False
+EXP_DIR: contextlocnet 
+CONTEXT: True
 USE_ROI_SCORE: True
 USE_BG: False
 WSL: True

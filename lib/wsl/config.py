@@ -120,7 +120,6 @@ __C.TEST.BBOX = False
 
 # for grid search NMS max_per_image thresh and so on
 __C.TEST.CACHE = False
-__C.TEST.GRID_SEARCH = False
 __C.TEST.MAP = 0.0
 
 

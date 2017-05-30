@@ -67,6 +67,10 @@ class pascal_voc(imdb):
             'VOCdevkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), \
             'Path does not exist: {}'.format(self._data_path)
+        
+        # test split of PASCAL VOC >2007
+        if 'test' in self._name and int(self._year)>2007:
+            return
 
         self._gt_classes = {ix: self._load_pascal_classes_annotation(
             ix) for ix in self._image_index}
@@ -265,11 +269,11 @@ class pascal_voc(imdb):
         cache_file = os.path.join(self.cache_path,
                                   self.name + '_selective_search_roidb.pkl')
 
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
-            return roidb
+        # if os.path.exists(cache_file):
+            # with open(cache_file, 'rb') as fid:
+                # roidb = cPickle.load(fid)
+            # print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+            # return roidb
 
         if not cfg.WSL and (int(self._year) ==
                             2007 or self._image_set != 'test'):
@@ -279,9 +283,9 @@ class pascal_voc(imdb):
         else:
             roidb = self._load_selective_search_roidb(None)
 
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+        # with open(cache_file, 'wb') as fid:
+            # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
 
@@ -642,6 +646,10 @@ class pascal_voc(imdb):
 
         box_list = []
         total_roi = 0
+        up_1024 = 0
+        up_2048 = 0
+        up_3072 = 0
+        up_4096 = 0
         for i in xrange(raw_data.shape[0]):
             boxes = raw_data[i][:, (1, 0, 3, 2)] - 1
             keep = ds_utils.unique_boxes(boxes)
@@ -650,6 +658,21 @@ class pascal_voc(imdb):
             boxes = boxes[keep, :]
             total_roi += boxes.shape[0]
             box_list.append(boxes)
+
+            if boxes.shape[0] > 1024:
+                up_1024 += 1
+            if boxes.shape[0] > 2048:
+                up_2048 += 1
+            if boxes.shape[0] > 3072:
+                up_3072 += 1
+            if boxes.shape[0] > 4096:
+                up_4096 += 1
+
+        print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
+        print 'up_1024: ', up_1024
+        print 'up_2048: ', up_2048
+        print 'up_3072: ', up_3072
+        print 'up_4096: ', up_4096
 
         print 'total_roi: ', total_roi, ' ave roi: ', total_roi / i
         return self.create_roidb_from_box_list(box_list, gt_roidb)

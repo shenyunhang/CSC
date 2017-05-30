@@ -32,16 +32,19 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
+		ITERS=20
 		;;
 	pascal_voc07+12)
 		TRAIN_IMDB="voc_2007+2012_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
+		ITERS=20
 		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
+		ITERS=280000
 		;;
 	*)
 		echo "No dataset given"
@@ -49,20 +52,11 @@ case $DATASET in
 		;;
 esac
 
-for((ITERS=1;ITERS<=10;ITERS++))
+for((ITER=1;ITER<=ITERS;ITER++))
 do
-	NET_PREFIX="${NET}_iter_${ITERS}"
+	NET_PREFIX="${NET}_iter_${ITER}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/wsddn_origin_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
-	fi
-done
-
-for((ITERS=1;ITERS<=10;ITERS++))
-do
-	NET_PREFIX="${NET}_2_iter_${ITERS}"
-	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
-	then
-		./experiments/scripts/wsddn_origin_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+		./experiments/scripts/wsddn_x_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done
