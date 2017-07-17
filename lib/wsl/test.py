@@ -437,7 +437,7 @@ def save_debug_im(im, target_size, save_path):
     cv2.imwrite(save_path, im_save)
 
 
-def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
+def test_net(net, imdb, max_per_image=10000, thresh=0.000000001, vis=False):
     """Test a network on an image database."""
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh
@@ -590,9 +590,9 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
     with open(det_file, 'wb') as f:
         cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
 
-    # det_file_o = os.path.join(output_dir, 'detections_o.pkl')
-    # with open(det_file_o, 'wb') as f:
-        # cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
+    det_file_o = os.path.join(output_dir, 'detections_o.pkl')
+    with open(det_file_o, 'wb') as f:
+        cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
@@ -723,7 +723,7 @@ def test_net_cache(net, imdb, max_per_image=1000,
         # we make sure all region all left
         origin_NMS = cfg.TEST.NMS
         cfg.TEST.NMS = 1.1
-        test_net(net, imdb, max_per_image=9999, thresh=0.0000, vis=False)
+        test_net(net, imdb, max_per_image=99999, thresh=0.0000, vis=False)
         cfg.TEST.NMS = origin_NMS
 
     with open(det_file, 'rb') as f:

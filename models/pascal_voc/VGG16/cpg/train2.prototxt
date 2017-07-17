@@ -145,12 +145,6 @@ layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "lab
 layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 1
 	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
-layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
-	param { lr_mult: 0 decay_mult: 0 }
-	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
-	center_filler { type: "gaussian" }}
-	loss_weight: 0.0001 propagate_down: true propagate_down: false propagate_down: false }
-
 #-----------------------------------STATISTICS----------------------------------------------------------------
 layer { name: "statistics" type: "Statistics" bottom: "labels" bottom: "cls_score" bottom: "cls_pos" bottom: "cls_neg"
 	bottom: "opg_roi_select"

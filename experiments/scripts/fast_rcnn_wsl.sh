@@ -54,7 +54,7 @@ echo Logging output to "$LOG"
 
 time ./tools/train_net.py --gpu ${GPU_ID} \
 	--solver models/${PT_DIR}/${NET}/fast_rcnn_wsl/solver.prototxt \
-	--weights output/vgg16_cpg_0304/voc_2007_trainval/VGG16_iter_2.caffemodel \
+	--weights data/imagenet_models/${NET}.v2.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fast_rcnn_wsl.yml \

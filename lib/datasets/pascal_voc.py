@@ -67,9 +67,9 @@ class pascal_voc(imdb):
             'VOCdevkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), \
             'Path does not exist: {}'.format(self._data_path)
-        
+
         # test split of PASCAL VOC >2007
-        if 'test' in self._name and int(self._year)>2007:
+        if 'test' in self._name and int(self._year) > 2007:
             return
 
         self._gt_classes = {ix: self._load_pascal_classes_annotation(
@@ -266,22 +266,37 @@ class pascal_voc(imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path,
-                                  self.name + '_selective_search_roidb.pkl')
+        # TODO(YH): current we do not use cache, due to num_classes is different
+        # cache_file = os.path.join(self.cache_path,
+        # self.name + '_selective_search_roidb.pkl')
 
         # if os.path.exists(cache_file):
-            # with open(cache_file, 'rb') as fid:
-                # roidb = cPickle.load(fid)
-            # print '{} ss roidb loaded from {}'.format(self.name, cache_file)
-            # return roidb
+        # with open(cache_file, 'rb') as fid:
+        # roidb = cPickle.load(fid)
+        # print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+        # return roidb
 
-        if not cfg.WSL and (int(self._year) ==
-                            2007 or self._image_set != 'test'):
-            gt_roidb = self.gt_roidb()
-            ss_roidb = self._load_selective_search_roidb(gt_roidb)
-            roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
-        else:
+        if cfg.WSL and not cfg.USE_PSEUDO:
+            # WSL train and test
             roidb = self._load_selective_search_roidb(None)
+        elif not cfg.WSL and cfg.USE_PSEUDO and 'trainval' in self.name:
+            # WSL fast rcnn train
+            pseudo_gt_roidb = self.pseudo_gt_roidb()
+            ss_roidb = self._load_selective_search_roidb(pseudo_gt_roidb)
+            roidb = imdb.merge_roidbs(pseudo_gt_roidb, ss_roidb)
+        elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
+            # WSL fast rcnn test
+            roidb = self._load_selective_search_roidb(None)
+        elif not cfg.WSL and not cfg.USE_PSEUDO:
+            # Fast rcnn train and test
+            if (int(self._year) == 2007 or self._image_set != 'test'):
+                gt_roidb = self.gt_roidb()
+                ss_roidb = self._load_selective_search_roidb(gt_roidb)
+                roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
+            else:
+                roidb = self._load_selective_search_roidb(None)
+        else:
+            raise Exception('Not implement mode.')
 
         # with open(cache_file, 'wb') as fid:
             # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
@@ -299,6 +314,7 @@ class pascal_voc(imdb):
         # TODO(YH): current we do not use cache, due to num_classes is different
         # cache_file = os.path.join(self.cache_path,
         # self.name + '_edge_boxes_roidb.pkl')
+
         # if os.path.exists(cache_file):
         # with open(cache_file, 'rb') as fid:
         # roidb = cPickle.load(fid)
@@ -315,14 +331,15 @@ class pascal_voc(imdb):
             roidb = imdb.merge_roidbs(pseudo_gt_roidb, eb_roidb)
         elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
             # WSL fast rcnn test
-            gt_roidb = self.gt_roidb()
-            eb_roidb = self._load_edge_boxes_roidb(gt_roidb)
-            roidb = imdb.merge_roidbs(gt_roidb, eb_roidb)
+            roidb = self._load_edge_boxes_roidb(None)
         elif not cfg.WSL and not cfg.USE_PSEUDO:
             # Fast rcnn train and test
-            gt_roidb = self.gt_roidb()
-            eb_roidb = self._load_edge_boxes_roidb(gt_roidb)
-            roidb = imdb.merge_roidbs(gt_roidb, eb_roidb)
+            if (int(self._year) == 2007 or self._image_set != 'test'):
+                gt_roidb = self.gt_roidb()
+                eb_roidb = self._load_edge_boxes_roidb(gt_roidb)
+                roidb = imdb.merge_roidbs(gt_roidb, eb_roidb)
+            else:
+                roidb = self._load_edge_boxes_roidb(None)
         else:
             raise Exception('Not implement mode.')
 
@@ -460,14 +477,15 @@ class pascal_voc(imdb):
             roidb = imdb.merge_roidbs(pseudo_gt_roidb, mcg_roidb)
         elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
             # WSL fast rcnn test
-            gt_roidb = self.gt_roidb()
-            mcg_roidb = self._load_mcg_roidb(gt_roidb)
-            roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
+            roidb = self._load_mcg_roidb(None)
         elif not cfg.WSL and not cfg.USE_PSEUDO:
             # Fast rcnn train and test
-            gt_roidb = self.gt_roidb()
-            mcg_roidb = self._load_mcg_roidb(gt_roidb)
-            roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
+            if (int(self._year) == 2007 or self._image_set != 'test'):
+                gt_roidb = self.gt_roidb()
+                mcg_roidb = self._load_mcg_roidb(gt_roidb)
+                roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
+            else:
+                roidb = self._load_mcg_roidb(None)
         else:
             raise Exception('Not implement mode.')
 
