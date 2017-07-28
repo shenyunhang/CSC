@@ -1,11 +1,11 @@
 TRAIN:
         MAX_SIZE: 2000
         USE_PREFETCH: True
-        PROPOSAL_METHOD: selective_search
+        PROPOSAL_METHOD: mcg
 
 TEST:
         MAX_SIZE: 2000
-        PROPOSAL_METHOD: selective_search
+        PROPOSAL_METHOD: mcg
 USE_PSEUDO: True
 PSEUDO_PATH: '/home/shenyunhang/Documents/wsl/output/vgg16_0725/voc_2007_trainval/VGG16_iter_20/detections.pkl'
 RNG_SEED: 6

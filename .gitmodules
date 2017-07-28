@@ -6,3 +6,6 @@
 	path = caffe-wsl
 	url = https://shenyunhang@bitbucket.org/shenyunhang/caffe-wsl.git
 	branch = wsl
+[submodule "caffe-fwsl"]
+	path = caffe-fwsl
+	url = https://shenyunhang@bitbucket.org/shenyunhang/ssd.git

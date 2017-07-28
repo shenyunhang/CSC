@@ -1,16 +1,7 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Test a Fast R-CNN network on an image database."""
-
 import _init_paths
-from wsl.test import test_net_ensemble
+from wsl.test import test_net, test_net_cache, test_net_bbox
 from wsl.config import cfg_wsl
 from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 from datasets.factory import get_imdb
@@ -29,9 +20,14 @@ def parse_args():
     Parse input arguments
     """
     parser = argparse.ArgumentParser(description='Test a Fast R-CNN network')
-    parser.add_argument('--result', dest='result_dirs',
-                        help='multi test result dirs',
-                        default=None, nargs='+')
+    parser.add_argument('--gpu', dest='gpu_id', help='GPU id to use',
+                        default=0, type=int)
+    parser.add_argument('--def', dest='prototxt',
+                        help='prototxt file defining the network',
+                        default=None, type=str)
+    parser.add_argument('--net', dest='caffemodel',
+                        help='model to test',
+                        default=None, type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file', default=None, type=str)
     parser.add_argument('--wait', dest='wait',
@@ -45,9 +41,11 @@ def parse_args():
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
+    parser.add_argument('--vis', dest='vis', help='visualize detections',
+                        action='store_true')
     parser.add_argument('--num_dets', dest='max_per_image',
                         help='max number of detections per image',
-                        default=100, type=int)
+                        default=10000, type=int)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -68,13 +66,34 @@ if __name__ == '__main__':
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
 
+    cfg.GPU_ID = args.gpu_id
 
     print('Using config:')
     pprint.pprint(cfg)
+
+    if not os.path.exists(args.caffemodel) and args.wait:
+        while not os.path.exists(args.caffemodel) and args.wait:
+            current_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+            print('{}: waiting for {} to exist...'.format(
+                current_time, args.caffemodel))
+            time.sleep(60 * 10)
+        time.sleep(60 * 5)
+
+    # set up caffe
+    caffe.set_mode_gpu()
+    caffe.set_device(args.gpu_id)
+    net = caffe.Net(args.prototxt, args.caffemodel, caffe.TEST)
+    net.name = os.path.splitext(os.path.basename(args.caffemodel))[0]
 
     imdb = get_imdb(args.imdb_name)
     imdb.competition_mode(args.comp_mode)
     imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
 
-    test_net_ensemble(
-        args.result_dirs, imdb, max_per_image=args.max_per_image)
+    if cfg.TEST.BBOX:
+        test_net_bbox(
+            net, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    elif cfg.TEST.CACHE:
+        test_net_cache(
+            net, imdb, max_per_image=args.max_per_image, vis=args.vis)
+    else:
+        test_net(net, imdb, max_per_image=args.max_per_image, vis=args.vis)

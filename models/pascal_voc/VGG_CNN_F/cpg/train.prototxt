@@ -4,39 +4,34 @@ layer {	name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' to
 	python_param { module: 'roi_data_layer.layer_wsl' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
 #-------------------------------------------------------------------------------------------------
-layer {	name: "conv1" type: "Convolution" bottom: "data" top: "conv1"
+layer { name: "conv1" type: "Convolution" bottom: "data" top: "conv1"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
-#	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
- 	convolution_param { num_output: 64 kernel_size: 11 stride: 4 }}
-layer {	name: "relu1" type: "ReLU" bottom: "conv1" top: "conv1" }
+	convolution_param { num_output: 64 kernel_size: 11 stride: 4 }}
+layer { name: "relu1" type: "ReLU" bottom: "conv1" top: "conv1" }
 layer { name: "norm1" type: "LRN" bottom: "conv1" top: "norm1"
 	lrn_param { local_size: 5 alpha: 0.0005 beta: 0.75 k: 2 }}
-layer {	name: "pool1" type: "Pooling" bottom: "norm1" top: "pool1"
+layer { name: "pool1" type: "Pooling" bottom: "norm1" top: "pool1"
 	pooling_param { pool: MAX kernel_size: 3 stride: 2 }}
 layer { name: "conv2" type: "Convolution" bottom: "pool1" top: "conv2"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
-#	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	convolution_param { num_output: 256 pad: 2 kernel_size: 5 }}
 layer { name: "relu2" type: "ReLU" bottom: "conv2" top: "conv2" }
 layer { name: "norm2" type: "LRN" bottom: "conv2" top: "norm2"
 	lrn_param { local_size: 5 alpha: 0.0005 beta: 0.75 k: 2 }}
 layer { name: "pool2" type: "Pooling" bottom: "norm2" top: "pool2"
 	pooling_param { pool: MAX kernel_size: 3 stride: 2 }}
-layer {	name: "conv3" type: "Convolution" bottom: "pool2" top: "conv3"
+layer { name: "conv3" type: "Convolution" bottom: "pool2" top: "conv3"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
-#	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	convolution_param { num_output: 256 pad: 1 kernel_size: 3 }}
-layer {	name: "relu3" type: "ReLU" bottom: "conv3" top: "conv3" }
+layer { name: "relu3" type: "ReLU" bottom: "conv3" top: "conv3" }
 layer { name: "conv4" type: "Convolution" bottom: "conv3" top: "conv4"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
-#	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	convolution_param { num_output: 256 pad: 1 kernel_size: 3 }}
-layer {	name: "relu4" type: "ReLU" bottom: "conv4" top: "conv4" }
+layer { name: "relu4" type: "ReLU" bottom: "conv4" top: "conv4" }
 layer { name: "conv5" type: "Convolution" bottom: "conv4" top: "conv5"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
-#	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
- 	convolution_param { num_output: 256 pad: 1 kernel_size: 3 }}
-layer {	name: "relu5" type: "ReLU" bottom: "conv5" top: "conv5" }
+	convolution_param { num_output: 256 pad: 1 kernel_size: 3 }}
+layer { name: "relu5" type: "ReLU" bottom: "conv5" top: "conv5" }
 #-------------------------------------------------------------------------------------------------------------
 
 #------------------------------------ROI POOLING--------------------------------------------------------------
@@ -50,15 +45,15 @@ layer { name: "boost" type: "Scale" bottom: "roi_pool_conv5" bottom: "roi_scores
 	scale_param { axis: 0 }}
 
 #-----------------------------------FC------------------------------------------------------------------------
-layer {	name: "fc6" type: "InnerProduct" bottom: "boost" top: "fc6"
+layer { name: "fc6" type: "InnerProduct" bottom: "boost" top: "fc6"
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 4096 }}
 
-layer {	name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
+layer { name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
 
-layer {	name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { dropout_ratio: 0.5 }}
+layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { dropout_ratio: 0.5 }}
 
-layer {	name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
+layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 4096 }}
 
@@ -99,6 +94,7 @@ layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "ro
 	cpg_param { is_cpg: true mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
 	start_layer_name: "conv1" end_layer_name: "cls_score" ignore_label: 20
 	opg_blob_name: "data"
+	#opg_blob_name: "conv1"
 	#opg_blob_name: "conv2"
 	#opg_blob_name: "conv3"
 	#opg_blob_name: "conv4"
@@ -121,11 +117,11 @@ layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "lab
 layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 1
 	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
-#layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
-#	param { lr_mult: 0 decay_mult: 0 }
-#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
-#	center_filler { type: "gaussian" }}
-#	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
+layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
+	param { lr_mult: 0 decay_mult: 0 }
+	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
+	center_filler { type: "gaussian" }}
+	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
 
 #-----------------------------------STATISTICS----------------------------------------------------------------
 layer { name: "statistics" type: "Statistics" bottom: "labels" bottom: "cls_score" bottom: "cls_pos" bottom: "cls_neg"

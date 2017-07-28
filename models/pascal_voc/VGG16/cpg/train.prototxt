@@ -1,13 +1,13 @@
 name: "VGG_ILSVRC_16_layers"
-layer {	name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'labels'
-	#top: 'opg_filter' top: 'opg_io'
-	python_param { module: 'roi_data_layer.layer_wsl' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
+layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'roi_num' top: 'labels'
+	#top: 'cpg_filter' top: 'cpg_io'
+	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
 	convolution_param { num_output: 64 pad: 1 kernel_size: 3 }}
-layer {	name: "relu1_1" type: "ReLU" bottom: "conv1_1" top: "conv1_1" }
+layer { name: "relu1_1" type: "ReLU" bottom: "conv1_1" top: "conv1_1" }
 layer { name: "conv1_2" type: "Convolution" bottom: "conv1_1" top: "conv1_2"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
 	convolution_param { num_output: 64 pad: 1 kernel_size: 3 }}
@@ -65,6 +65,8 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
+#layer { name: "roi_pool_conv5" type: "YAROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
+#	ya_roi_pooling_param { pooled_w: 7 pooled_h: 7}}
 #layer { name: "roi_pool_conv5" type: "ROIAlign" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 #	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
@@ -83,7 +85,7 @@ layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { d
 
 layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
-  	inner_product_param { num_output: 4096 }}
+	inner_product_param { num_output: 4096 }}
 
 layer { name: "relu7" type: "ReLU" bottom: "fc7" top: "fc7" }
 
@@ -105,8 +107,8 @@ layer { name: "bbox_score" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_de
 	eltwise_param { operation: PROD }}
 
 #-----------------------------------POOLING-------------------------------------------------------------------
-layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_score"
-	general_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_score" type: "RoIScorePooling" bottom: "bbox_score" bottom: "roi_num" top: "cls_score"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
 
 #layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
 #	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
@@ -116,28 +118,30 @@ layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_
 
 #-----------------------------------CPG-----------------------------------------------------------------------
 layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "rois" bottom: "bbox_score"
-	#bottom: "opg_filter" bottom: "opg_io"
-	top: "opg_roi_select"
+	#bottom: "cpg_filter" bottom: "cpg_io"
+	top: "cpg_roi_select"
 	top: "labels_pos" top: "labels_neg"
 	cpg_param { is_cpg: true mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
 	start_layer_name: "conv1_1" end_layer_name: "cls_score" ignore_label: 20
-	opg_blob_name: "data"
-	#opg_blob_name: "conv1_2"
-	#opg_blob_name: "conv2_2"
-	#opg_blob_name: "conv3_3"
-	#opg_blob_name: "conv4_3"
-	#opg_blob_name: "conv5_3"
+	cpg_blob_name: "data"
+	#cpg_blob_name: "conv1_2"
+	#cpg_blob_name: "conv2_2"
+	#cpg_blob_name: "conv3_3"
+	#cpg_blob_name: "conv4_3"
+	#cpg_blob_name: "conv5_3"
 	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
 	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
 
 #-----------------------------------POOLING-------------------------------------------------------------------
-layer { name: "pos_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "opg_roi_select"
+layer { name: "pos_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "cpg_roi_select"
 	top: "score_pos" propagate_down: true propagate_down: false polar_constraint_param { polar: true }}
-layer { name: "neg_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "opg_roi_select"
+layer { name: "neg_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "cpg_roi_select"
 	top: "score_neg" propagate_down: true propagate_down: false polar_constraint_param { polar: false }}
 
-layer { name: "cls_pos" type: "GeneralPooling" bottom: "score_pos" top: "cls_pos" general_pooling_param { pool: SUM axis: 0 }}
-layer { name: "cls_neg" type: "GeneralPooling" bottom: "score_neg" top: "cls_neg" general_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_pos" type: "RoIScorePooling" bottom: "score_pos" bottom: "roi_num" top: "cls_pos"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_neg" type: "RoIScorePooling" bottom: "score_neg" bottom: "roi_num" top: "cls_neg"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
 
 #-----------------------------------LOSS----------------------------------------------------------------------
 layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "labels_pos" top: "loss_pos" loss_weight: 1
@@ -153,5 +157,5 @@ layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bo
 
 #-----------------------------------STATISTICS----------------------------------------------------------------
 layer { name: "statistics" type: "Statistics" bottom: "labels" bottom: "cls_score" bottom: "cls_pos" bottom: "cls_neg"
-	bottom: "opg_roi_select"
+	bottom: "cpg_roi_select"
 	propagate_down: false propagate_down: false propagate_down: false propagate_down: false propagate_down: false }

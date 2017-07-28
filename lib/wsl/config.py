@@ -1,21 +1,3 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Fast R-CNN config system.
-
-This file specifies default config options for Fast R-CNN. You should not
-change values in this file. Instead, you should write a config file (in yaml)
-and use cfg_from_file(yaml_file) to load it and override the default options.
-
-Most tools in $ROOT/tools take a --cfg option to specify an override file.
-    - See tools/{train,test}_net.py for example code that uses cfg_from_file()
-    - See experiments/cfgs/*.yml for example YAML config override files
-"""
-
 import os
 import os.path as osp
 import numpy as np
@@ -35,7 +17,7 @@ __C.TRAIN = edict()
 
 # Scales to use during training (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
+__C.TRAIN.SCALES = (600, )
 
 # Max pixel size of the longest side of a scaled input image
 __C.TRAIN.MAX_SIZE = 1000
@@ -52,12 +34,53 @@ __C.TRAIN.ROIS_PER_IM = 10000
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
 
-__C.TRAIN.USE_CROP = False
-__C.TRAIN.CROP = 0.9
+__C.TRAIN.USE_DISTORTION_OLD = True
+__C.TRAIN.SATURATION = 1.5
+__C.TRAIN.EXPOSURE = 1.5
 
 __C.TRAIN.USE_DISTORTION = False
-__C.TRAIN.EXPOSURE = 1.5
-__C.TRAIN.SATURATION = 1.5
+__C.TRAIN.brightness_prob = 0.0
+__C.TRAIN.brightness_delta = 32
+__C.TRAIN.contrast_prob = 0.0
+__C.TRAIN.contrast_lower = 0.5
+__C.TRAIN.contrast_upper = 1.5
+__C.TRAIN.hue_prob = 0.0
+__C.TRAIN.hue_delta = 18
+__C.TRAIN.saturation_prob = 0.5
+__C.TRAIN.saturation_lower = 0.5
+__C.TRAIN.saturation_upper = 1.5
+__C.TRAIN.exposure_prob = 0.5
+__C.TRAIN.exposure_lower = 0.5
+__C.TRAIN.exposure_upper = 1.5
+__C.TRAIN.random_order_prob = 0.0
+
+__C.TRAIN.USE_EXPAND = False
+__C.TRAIN.expand_prob = 0.5
+__C.TRAIN.max_expand_ratio = 4.0
+
+__C.TRAIN.USE_SAMPLE = False
+__C.TRAIN.batch_sampler = [
+    edict({
+        'sampler': {
+            'min_scale': 0.9,
+            'max_scale': 0.9,
+            'min_aspect_ratio': 1.0,
+            'max_aspect_ratio': 1.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.0,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 1,
+        'max_sample': 1,
+    }),
+]
+
+__C.TRAIN.USE_CROP = True
+__C.TRAIN.CROP = 0.9
+
+# __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
+__C.TRAIN.INTERP_MODEL = ['LINEAR']
 
 __C.TRAIN.ROI_AU = False
 __C.TRAIN.ROI_AU_STEP = 1
@@ -90,6 +113,8 @@ __C.TRAIN.ASPECT_GROUPING = True
 
 __C.TRAIN.PASS_IM = 0
 
+__C.TRAIN.SHUFFLE = True
+
 #
 # Testing options
 #
@@ -98,7 +123,7 @@ __C.TEST = edict()
 
 # Scales to use during testing (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (600,)
+__C.TEST.SCALES = (600, )
 
 # Max pixel size of the longest side of a scaled input image
 __C.TEST.MAX_SIZE = 1000
@@ -121,7 +146,6 @@ __C.TEST.BBOX = False
 # for grid search NMS max_per_image thresh and so on
 __C.TEST.CACHE = False
 __C.TEST.MAP = 0.0
-
 
 #
 # MISC
@@ -182,6 +206,9 @@ __C.USE_BG = False
 
 __C.SPATIAL_SCALE = 1. / 16.
 
+# __C.RESIZE_MODE = 'WARP'
+__C.RESIZE_MODE = 'FIT_SMALLEST'
+
 
 def get_vis_dir(imdb, net=None):
     """Return the directory where experimental artifacts are placed.
@@ -190,8 +217,7 @@ def get_vis_dir(imdb, net=None):
     A canonical path is built using the name from an imdb and a network
     (if not None).
     """
-    outdir = osp.abspath(
-        osp.join(__C.ROOT_DIR, 'vis', __C.EXP_DIR, imdb.name))
+    outdir = osp.abspath(osp.join(__C.ROOT_DIR, 'vis', __C.EXP_DIR, imdb.name))
     if net is not None:
         outdir = osp.join(outdir, net.name)
     if not os.path.exists(outdir):

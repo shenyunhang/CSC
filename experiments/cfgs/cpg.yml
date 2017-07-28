@@ -3,13 +3,10 @@ TRAIN:
         MAX_SIZE: 2000
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
-        USE_CROP: True
-        USE_DISTORTION: True
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
         PROPOSAL_METHOD: mcg
         ASPECT_GROUPING: False
-        OPG_CACHE: False
 
 TEST:
         SCALES: [480, 576, 688, 864, 1200]

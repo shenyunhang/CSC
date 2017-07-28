@@ -52,9 +52,14 @@ LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
+echo ---------------------------------------------------------------------
+git log -1
+git submodule foreach 'git log -1'
+echo ---------------------------------------------------------------------
+
 time ./tools/train_net.py --gpu ${GPU_ID} \
 	--solver models/${PT_DIR}/${NET}/fast_rcnn_wsl/solver.prototxt \
-	--weights data/imagenet_models/${NET}.v2.caffemodel \
+	--weights /home/shenyunhang/Documents/wsl/output/vgg16_0707/voc_2007_trainval/VGG16_iter_20.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fast_rcnn_wsl.yml \

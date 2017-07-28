@@ -9,7 +9,7 @@ layer {	name: "conv1" type: "Convolution" bottom: "data" top: "conv1"
 	convolution_param { num_output: 96 kernel_size: 7 stride: 2 }}
 layer { name: "relu1" type: "ReLU" bottom: "conv1" top: "conv1" }
 layer { name: "norm1" type: "LRN" bottom: "conv1" top: "norm1" lrn_param { local_size: 5 alpha: 0.0005 beta: 0.75 k: 2 }}
-layer {	name: "pool1" type: "Pooling" bottom: "norm1" top: "pool1" pooling_param { pool: MAX kernel_size: 3 stride: 2 }}
+layer { name: "pool1" type: "Pooling" bottom: "norm1" top: "pool1" pooling_param { pool: MAX kernel_size: 3 stride: 2 }}
 layer {	name: "conv2" type: "Convolution" bottom: "pool1" top: "conv2"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
 	convolution_param { num_output: 256 pad: 1 kernel_size: 5 stride: 2 }}
@@ -31,16 +31,16 @@ layer { name: "relu5" type: "ReLU" bottom: "conv5" top: "conv5" }
 #-------------------------------------------------------------------------------------------------------------
 
 #------------------------------------ROI POOLING--------------------------------------------------------------
-layer { name: "roi_pool5" type: "ROIPooling" bottom: "conv5" bottom: "rois" top: "roi_pool5"
+layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 6 pooled_h: 6 spatial_scale: 0.0625 }}
 
 #------------------------------------ROI SCORE BOOSTING-------------------------------------------------------
-layer { name: "boost" type: "Scale" bottom: "roi_pool5" bottom: "roi_scores" top: "boost"
+layer { name: "boost" type: "Scale" bottom: "roi_pool_conv5" bottom: "roi_scores" top: "boost"
 	scale_param { axis: 0 }}
 
 #-----------------------------------FC------------------------------------------------------------------------
 layer { name: "fc6" type: "InnerProduct" bottom: "boost" top: "fc6"
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 4096 }}
 
 layer { name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
@@ -48,7 +48,7 @@ layer { name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
 layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { dropout_ratio: 0.5 }}
 
 layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 1024 }}
 
 layer { name: "relu7" type: "ReLU" bottom: "fc7" top: "fc7" }
@@ -57,10 +57,10 @@ layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7" dropout_param { d
 
 #-----------------------------------TWO STREAM----------------------------------------------------------------
 layer { name: "fc8c" type: "InnerProduct" bottom: "fc7" top: "fc8c" 
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 20 weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 layer { name: "fc8d" type: "InnerProduct" bottom: "fc7" top: "fc8d" 
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 20 weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 
 layer { name: "alpha_cls" type: "Softmax" bottom: "fc8c" top: "alpha_cls" softmax_param { axis: 1 }}
@@ -113,7 +113,7 @@ layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "lab
 
 layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
 	param { lr_mult: 0 decay_mult: 0 }
-	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 1 display: 1280 update: 128
+	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
 	center_filler { type: "gaussian" }}
 	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
 

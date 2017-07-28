@@ -1,0 +1,17 @@
+train_net: "models/pascal_voc/VGG_CNN_F/wsddn_x/train.prototxt"
+base_lr: 0.001
+lr_policy: "step"
+gamma: 0.1
+stepsize: 7820
+display: 10
+average_loss: 10
+momentum: 0.9
+weight_decay: 0.0005
+# We disable standard caffe solver snapshotting and implement our own snapshot
+# function
+snapshot: 0
+# We still use the snapshot prefix, though
+snapshot_prefix: "VGG_CNN_F"
+#debug_info: true
+
+iter_size: 128

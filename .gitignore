@@ -12,3 +12,6 @@ output
 
 tmp
 vis
+.directory
+*.mdb
+*.txt

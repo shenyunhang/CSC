@@ -70,7 +70,7 @@ echo ---------------------------------------------------------------------
 
 NET_FINAL=output/${EXP_DIR}/${TRAIN_IMDB}/${NET_PREFIX}.caffemodel
 
-time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \

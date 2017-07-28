@@ -18,7 +18,8 @@ def im_list_to_blob(ims):
     """
     # max_shape = np.array([im.shape for im in ims]).max(axis=0)
     all_shape = [im.shape for im in ims]
-    all_shape.append((227, 227, 3))
+    # change 227 to 300 to fit SSD
+    all_shape.append((300, 300, 3))
     max_shape = np.array(all_shape).max(axis=0)
     num_images = len(ims)
     blob = np.zeros((num_images, max_shape[0], max_shape[1], 3),

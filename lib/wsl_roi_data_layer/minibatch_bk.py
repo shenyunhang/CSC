@@ -1,14 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Compute minibatch blobs for training a Fast R-CNN network."""
-
 import numpy as np
 import numpy.random as npr
 import cv2
@@ -16,11 +7,9 @@ import os
 from configure import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
 import datasets.ds_utils
-import wsl.wsl_utils
-import pdb
 
 
-def get_minibatch(roidb, num_classes, db_inds):
+def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
     num_images = len(roidb)
     # Sample random scales to use for each image in this batch
@@ -31,7 +20,7 @@ def get_minibatch(roidb, num_classes, db_inds):
     # Get the input image blob, formatted for caffe
     # im_crops is define as RoIs with form (y1,x1,y2,x2)
     im_blob, im_scales, im_crops, im_shapes = _get_image_blob(
-        roidb, random_scale_inds, db_inds)
+        roidb, random_scale_inds)
 
     # row col row col to x1 y1 x2 y2
     im_crops = np.array(im_crops, dtype=np.uint16)
@@ -43,8 +32,9 @@ def get_minibatch(roidb, num_classes, db_inds):
     rois_blob = np.zeros((0, 5), dtype=np.float32)
     rois_context_blob = np.zeros((0, 9), dtype=np.float32)
     rois_frame_blob = np.zeros((0, 9), dtype=np.float32)
-    labels_blob = np.zeros((0, num_classes), dtype=np.float32)
     rois_scores_blob = np.zeros((0, 1), dtype=np.float32)
+    roi_num_blob = np.zeros((0, 1), dtype=np.float32)
+    labels_blob = np.zeros((0, num_classes), dtype=np.float32)
     opg_filter_blob = np.zeros((0, num_classes), dtype=np.float32)
     opg_io_blob = np.zeros((0, 1), dtype=np.float32)
     for i_im in xrange(num_images):
@@ -103,7 +93,6 @@ def get_minibatch(roidb, num_classes, db_inds):
             opg_io_blob = np.vstack((opg_io_blob, io_blob_this))
 
         if cfg.TRAIN.ROI_AU:
-            # pdb.set_trace()
             offset = 1.0 / im_scales[i_im] / cfg.SPATIAL_SCALE
             offset_step = cfg.TRAIN.ROI_AU_STEP
 
@@ -179,21 +168,29 @@ def get_minibatch(roidb, num_classes, db_inds):
             im_labels = np.hstack((im_labels, [1.0]))
         labels_blob = np.vstack((labels_blob, im_labels))
 
+        im_roi_num = np.ones((1))
+        im_roi_num[0] = rois.shape[0]
+        roi_num_blob = np.vstack((roi_num_blob, im_roi_num))
+
     # For debug visualizations
     # _vis_minibatch(im_blob, rois_blob, labels_blob)
 
-    blobs['rois'] = rois_blob
+    blobs['roi'] = rois_blob
     if cfg.CONTEXT:
-        blobs['rois_context'] = rois_context_blob
-        blobs['rois_frame'] = rois_frame_blob
+        blobs['roi_context'] = rois_context_blob
+        blobs['roi_frame'] = rois_frame_blob
 
     if cfg.USE_ROI_SCORE:
         # n * 1 to n
-        blobs['roi_scores'] = np.add(np.reshape(
+        blobs['roi_score'] = np.add(np.reshape(
             rois_scores_blob, [rois_scores_blob.shape[0]]), 1)
     else:
-        blobs['roi_scores'] = np.ones((rois_blob.shape[0]), dtype=np.float32)
-    blobs['labels'] = labels_blob
+        blobs['roi_score'] = np.ones((rois_blob.shape[0]), dtype=np.float32)
+
+    blobs['roi_num'] = roi_num_blob
+
+    blobs['label'] = labels_blob
+
     if cfg.TRAIN.OPG_CACHE:
         blobs['opg_filter'] = opg_filter_blob
         blobs['opg_io'] = opg_io_blob
@@ -209,7 +206,7 @@ def get_minibatch(roidb, num_classes, db_inds):
     return blobs
 
 
-def _get_image_blob(roidb, scale_inds, db_inds):
+def _get_image_blob(roidb, scale_inds):
     """Builds an input blob from the images in the roidb at the specified
     scales.
     """
@@ -227,8 +224,10 @@ def _get_image_blob(roidb, scale_inds, db_inds):
 
         if cfg.TRAIN.USE_DISTORTION:
             hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
-            s0 = npr.random() * (cfg.TRAIN.SATURATION - 1) + 1
-            s1 = npr.random() * (cfg.TRAIN.EXPOSURE - 1) + 1
+            # s0 = npr.random() * (cfg.TRAIN.SATURATION - 1) + 1
+            # s1 = npr.random() * (cfg.TRAIN.EXPOSURE - 1) + 1
+            s0 = npr.random() * (1.5 - 1) + 1
+            s1 = npr.random() * (1.5 - 1) + 1
             s0 = s0 if npr.random() > 0.5 else 1.0 / s0
             s1 = s1 if npr.random() > 0.5 else 1.0 / s1
             hsv = np.array(hsv, dtype=np.float)
@@ -237,9 +236,11 @@ def _get_image_blob(roidb, scale_inds, db_inds):
             hsv = np.array(hsv, dtype=np.uint8)
             im = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
-        if cfg.TRAIN.USE_CROP:
+        # if cfg.TRAIN.USE_CROP:
+        if True:
             im_shape = np.array(im.shape)
-            crop_dims = im_shape[:2] * cfg.TRAIN.CROP
+            # crop_dims = im_shape[:2] * cfg.TRAIN.CROP
+            crop_dims = im_shape[:2] * 0.9
 
             r0 = npr.random()
             r1 = npr.random()

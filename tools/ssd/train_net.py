@@ -10,9 +10,8 @@
 """Train a Fast R-CNN network on a region of interest database."""
 
 import _init_paths
-from fast_rcnn.train import get_training_roidb
-from wsl.train import train_net
-from wsl.config import cfg_wsl
+from ssd.train import get_training_roidb, train_net
+from ssd.config import cfg_ssd
 from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 from configure import get_output_dir,get_vis_dir
 from datasets.factory import get_imdb
@@ -41,9 +40,6 @@ def parse_args():
     parser.add_argument('--weights', dest='pretrained_model',
                         help='initialize with pretrained model weights',
                         default=None, type=str)
-    parser.add_argument('--snapshot', dest='snapshot_state',
-                        help='initialize with snapshot solverstate',
-                        default=None, type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default=None, type=str)
@@ -66,15 +62,6 @@ def parse_args():
 
 
 def combined_roidb(imdb_names):
-    # treat as only one dataset
-    imdb = get_imdb(imdb_names)
-
-    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
-    imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
-    print 'Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD)
-    roidb = get_training_roidb(imdb)
-    return imdb, roidb
-
     def get_roidb(imdb_name):
         imdb = get_imdb(imdb_name)
         print 'Loaded dataset `{:s}` for training'.format(imdb.name)
@@ -99,7 +86,7 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
-    cfg_basic_generation(cfg_wsl)
+    cfg_basic_generation(cfg_ssd)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
@@ -124,10 +111,7 @@ if __name__ == '__main__':
 
     output_dir = get_output_dir(imdb)
     print 'Output will be saved to `{:s}`'.format(output_dir)
-    if cfg.OPG_DEBUG:
-        vis_dir = get_vis_dir(imdb)
 
     train_net(args.solver, roidb, output_dir,
               pretrained_model=args.pretrained_model,
-              snapshot_state=args.snapshot_state,
               max_iters=args.max_iters)

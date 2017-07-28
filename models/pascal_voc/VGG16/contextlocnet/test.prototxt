@@ -4,11 +4,12 @@ input: "rois" input_shape { dim: 1 dim: 5 }
 input: "rois_context" input_shape { dim: 1 dim: 9 }
 input: "rois_frame" input_shape { dim: 1 dim: 9 }
 input: "roi_scores" input_shape { dim: 1 }
+input: "roi_num" input_shape { dim: 1 }
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"
 	convolution_param { num_output: 64 pad: 1 kernel_size: 3 }}
-layer {	name: "relu1_1" type: "ReLU" bottom: "conv1_1" top: "conv1_1" }
+layer { name: "relu1_1" type: "ReLU" bottom: "conv1_1" top: "conv1_1" }
 layer { name: "conv1_2" type: "Convolution" bottom: "conv1_1" top: "conv1_2"
 	convolution_param { num_output: 64 pad: 1 kernel_size: 3 }}
 layer { name: "relu1_2" type: "ReLU" bottom: "conv1_2" top: "conv1_2" }
@@ -49,9 +50,9 @@ layer { name: "relu5_2" type: "ReLU" bottom: "conv5_2" top: "conv5_2" }
 layer { name: "conv5_3" type: "Convolution" bottom: "conv5_2" top: "conv5_3"
 	convolution_param { num_output: 512 pad: 1 kernel_size: 3 }}
 layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
-#-------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 
-#------------------------------------ROI POOLING--------------------------------------------------
+#------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 layer { name: "context_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "rois_context" top: "context_pool_conv5"
@@ -59,7 +60,7 @@ layer { name: "context_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bott
 layer { name: "frame_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "rois_frame" top: "frame_pool_conv5"
 	loop_roi_pooling_param {pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
-#------------------------------------ROI SCORE BOOSTING--------------------------------------------
+#------------------------------------ROI SCORE BOOSTING-------------------------------------------------------
 layer { name: "boost" type: "Scale" bottom: "roi_pool_conv5" bottom: "roi_scores" top: "boost"
 	scale_param { axis: 0 }}
 layer { name: "boost_context" type: "Scale" bottom: "context_pool_conv5" bottom: "roi_scores" top: "boost_context"
@@ -67,8 +68,7 @@ layer { name: "boost_context" type: "Scale" bottom: "context_pool_conv5" bottom:
 layer { name: "boost_frame" type: "Scale" bottom: "frame_pool_conv5" bottom: "roi_scores" top: "boost_frame"
 	scale_param { axis: 0 }}
 
-
-#-------------------------------------FC----------------------------------------------------------
+#-----------------------------------FC------------------------------------------------------------------------
 layer { name: "fc6" type: "InnerProduct" bottom: "boost" top: "fc6"
 	inner_product_param { num_output: 4096 }}
 layer { name: "fc6_context" type: "InnerProduct" bottom: "boost_context" top: "fc6_context"
@@ -84,9 +84,8 @@ layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { d
 layer { name: "drop6_context" type: "Dropout" bottom: "fc6_context" top: "fc6_context" dropout_param { dropout_ratio: 0.5 }}
 layer { name: "drop6_frame" type: "Dropout" bottom: "fc6_frame" top: "fc6_frame" dropout_param { dropout_ratio: 0.5 }}
 
-
 layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
-  	inner_product_param { num_output: 4096 }}
+	inner_product_param { num_output: 4096 }}
 layer { name: "fc7_context" type: "InnerProduct" bottom: "fc6_context" top: "fc7_context"
   	inner_product_param { num_output: 4096 }}
 layer { name: "fc7_frame" type: "InnerProduct" bottom: "fc6_frame" top: "fc7_frame"
@@ -100,7 +99,7 @@ layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7" dropout_param { d
 layer { name: "drop7_context" type: "Dropout" bottom: "fc7_context" top: "fc7_context" dropout_param { dropout_ratio: 0.5 }}
 layer { name: "drop7_frame" type: "Dropout" bottom: "fc7_frame" top: "fc7_frame" dropout_param { dropout_ratio: 0.5 }}
 
-#-----------------------------------TWO STREAM----------------------------------------------------
+#-----------------------------------TWO STREAM----------------------------------------------------------------
 layer { name: "fc8c" type: "InnerProduct" bottom: "fc7" top: "fc8c" 
 	inner_product_param { num_output: 20 }}
 layer { name: "fc8d_context" type: "InnerProduct" bottom: "fc7_context" top: "fc8d_context" 

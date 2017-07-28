@@ -7,7 +7,7 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 NET=$2
 DATASET=$3
-ITERS=$4
+NET_PREFIX=$4
 
 array=( $@ )
 len=${#array[@]}
@@ -51,7 +51,7 @@ case $DATASET in
 esac
 
 mkdir -p "experiments/logs/${EXP_DIR}"
-LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${ITERS}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
+LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${NET_PREFIX}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
 LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
@@ -61,9 +61,9 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-NET_FINAL=output/${EXP_DIR}/${TRAIN_IMDB}/${ITERS}.caffemodel
+NET_FINAL=output/${EXP_DIR}/${TRAIN_IMDB}/${NET_PREFIX}.caffemodel
 
-time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TRAIN_IMDB} \

@@ -386,6 +386,7 @@ layer {
 layer {
   name: "roi_pool5"
   type: "ROIPooling"
+#  type: "ROIAlign"
   bottom: "conv5_3"
   bottom: "rois"
   top: "pool5"
@@ -460,10 +461,10 @@ layer {
   }
 }
 layer {
-  name: "cls_score_"
+  name: "cls_score"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score_"
+  top: "cls_score"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -512,6 +513,6 @@ layer {
 layer {
   name: "cls_prob"
   type: "Softmax"
-  bottom: "cls_score_"
+  bottom: "cls_score"
   top: "cls_prob"
 }

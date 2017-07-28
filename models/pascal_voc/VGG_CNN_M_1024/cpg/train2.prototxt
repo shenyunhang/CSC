@@ -9,7 +9,7 @@ layer {	name: "conv1" type: "Convolution" bottom: "data" top: "conv1"
 	convolution_param { num_output: 96 kernel_size: 7 stride: 2 }}
 layer { name: "relu1" type: "ReLU" bottom: "conv1" top: "conv1" }
 layer { name: "norm1" type: "LRN" bottom: "conv1" top: "norm1" lrn_param { local_size: 5 alpha: 0.0005 beta: 0.75 k: 2 }}
-layer {	name: "pool1" type: "Pooling" bottom: "norm1" top: "pool1" pooling_param { pool: MAX kernel_size: 3 stride: 2 }}
+layer { name: "pool1" type: "Pooling" bottom: "norm1" top: "pool1" pooling_param { pool: MAX kernel_size: 3 stride: 2 }}
 layer {	name: "conv2" type: "Convolution" bottom: "pool1" top: "conv2"
 	param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }
 	convolution_param { num_output: 256 pad: 1 kernel_size: 5 stride: 2 }}
@@ -31,16 +31,16 @@ layer { name: "relu5" type: "ReLU" bottom: "conv5" top: "conv5" }
 #-------------------------------------------------------------------------------------------------------------
 
 #------------------------------------ROI POOLING--------------------------------------------------------------
-layer { name: "roi_pool5" type: "ROIPooling" bottom: "conv5" bottom: "rois" top: "roi_pool5"
+layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 6 pooled_h: 6 spatial_scale: 0.0625 }}
 
 #------------------------------------ROI SCORE BOOSTING-------------------------------------------------------
-layer { name: "boost" type: "Scale" bottom: "roi_pool5" bottom: "roi_scores" top: "boost"
+layer { name: "boost" type: "Scale" bottom: "roi_pool_conv5" bottom: "roi_scores" top: "boost"
 	scale_param { axis: 0 }}
 
 #-----------------------------------FC------------------------------------------------------------------------
 layer { name: "fc6" type: "InnerProduct" bottom: "boost" top: "fc6"
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 4096 }}
 
 layer { name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
@@ -48,7 +48,7 @@ layer { name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
 layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { dropout_ratio: 0.5 }}
 
 layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 1024 }}
 
 layer { name: "relu7" type: "ReLU" bottom: "fc7" top: "fc7" }
@@ -57,10 +57,10 @@ layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7" dropout_param { d
 
 #-----------------------------------TWO STREAM----------------------------------------------------------------
 layer { name: "fc8c" type: "InnerProduct" bottom: "fc7" top: "fc8c" 
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 20 weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 layer { name: "fc8d" type: "InnerProduct" bottom: "fc7" top: "fc8d" 
-	param { lr_mult: 1 } param { lr_mult: 2 }
+	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
 	inner_product_param { num_output: 20 weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 
 layer { name: "alpha_cls" type: "Softmax" bottom: "fc8c" top: "alpha_cls" softmax_param { axis: 1 }}
@@ -74,8 +74,50 @@ layer { name: "bbox_score" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_de
 layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_score"
 	general_pooling_param { pool: SUM axis: 0 }}
 
-layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
-	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+#layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
+#	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
 #layer { name: "loss_feature" type: "SmoothFeatureLoss" bottom: "fc7" bottom: "rois" bottom: "bbox_score" bottom: "labels"
 #	top: "loss_feature" loss_weight: 0.001 smooth_feature_loss_param { debug_info: false }}
+
+#-----------------------------------CPG-----------------------------------------------------------------------
+layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "rois" bottom: "bbox_score"
+	#bottom: "opg_filter" bottom: "opg_io"
+	top: "opg_roi_select"
+	top: "labels_pos" top: "labels_neg"
+	cpg_param { is_cpg: false mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
+	start_layer_name: "conv1" end_layer_name: "cls_score" ignore_label: 20
+	opg_blob_name: "data"
+	#opg_blob_name: "conv1"
+	#opg_blob_name: "conv2"
+	#opg_blob_name: "conv3"
+	#opg_blob_name: "conv4"
+	#opg_blob_name: "conv5"
+	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
+	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
+
+#-----------------------------------POOLING-------------------------------------------------------------------
+layer { name: "pos_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "opg_roi_select"
+	top: "score_pos" propagate_down: true propagate_down: false polar_constraint_param { polar: true }}
+layer { name: "neg_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "opg_roi_select"
+	top: "score_neg" propagate_down: true propagate_down: false polar_constraint_param { polar: false }}
+
+layer { name: "cls_pos" type: "GeneralPooling" bottom: "score_pos" top: "cls_pos" general_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_neg" type: "GeneralPooling" bottom: "score_neg" top: "cls_neg" general_pooling_param { pool: SUM axis: 0 }}
+
+#-----------------------------------LOSS----------------------------------------------------------------------
+layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "labels_pos" top: "loss_pos" loss_weight: 1
+	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 1
+	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+
+#layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
+#	param { lr_mult: 0 decay_mult: 0 }
+#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
+#	center_filler { type: "gaussian" }}
+#	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
+
+#-----------------------------------STATISTICS----------------------------------------------------------------
+layer { name: "statistics" type: "Statistics" bottom: "labels" bottom: "cls_score" bottom: "cls_pos" bottom: "cls_neg"
+	bottom: "opg_roi_select"
+	propagate_down: false propagate_down: false propagate_down: false propagate_down: false propagate_down: false }
