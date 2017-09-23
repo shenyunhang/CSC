@@ -38,19 +38,20 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=200
+		ITERS=30
+		ITERS2=200
 		;;
 	pascal_voc10)
 		TRAIN_IMDB="voc_2010_trainval"
 		TEST_IMDB="voc_2010_test"
 		PT_DIR="pascal_voc"
-		ITERS=200
+		ITERS=30
 		;;
 	pascal_voc07+12)
 		TRAIN_IMDB="voc_2007+2012_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=200
+		ITERS=30
 		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
@@ -75,16 +76,25 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}
+python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL
 
-echo ---------------------------------------------------------------------
-echo showing the solver file:
-cat "output/${EXP_DIR}/solver.prototxt"
-echo ---------------------------------------------------------------------
+./tools/fwsl/fc6fc7_to_wsl.py \
+	models/${PT_DIR}/${NET}/cpg/test.prototxt \
+	data/imagenet_models/${NET}.v2.caffemodel \
+	models/${PT_DIR}/${NET}/cpg/train_wsl.prototxt \
+	output/${EXP_DIR}/${NET}_wsl.v2.caffemodel
+
+
+NET_FINAL=output/${EXP_DIR}/${NET}_wsl.v2.caffemodel,data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel
+
+
 time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
-	--solver output/${EXP_DIR}/solver.prototxt \
-	--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel,data/imagenet_models/fc6fc7fc8wsl.caffemodel \
+	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
+	--weights ${NET_FINAL} \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
-	--cfg experiments/cfgs/fwsl.yml \
-	${EXTRA_ARGS}
+	--cfg experiments/cfgs/fwsl_fwsl.yml \
+	${EXTRA_ARGS} \
+	EXP_DIR ${EXP_DIR}/FWSL \
+	TRAIN.SCALES [300] \
+	TEST.SCALES [300]

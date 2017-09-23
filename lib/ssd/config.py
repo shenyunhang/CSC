@@ -26,8 +26,9 @@ __C.TRAIN.MAX_SIZE = 1000
 # If image per Batch lagerer than 64, blob will exceed INT_MAX.
 __C.TRAIN.IMS_PER_BATCH = 2
 
+# TODO(YH): BATCH_SIZE is determined by IM_PER_BATCH and iter_size
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 128
+# __C.TRAIN.BATCH_SIZE = 128
 
 __C.TRAIN.ROIS_PER_IM = 10000
 
@@ -156,6 +157,10 @@ __C.TRAIN.batch_sampler = [
     }),
 ]
 
+# TODO(YH): This is useless
+__C.TRAIN.USE_CROP = False
+__C.TRAIN.CROP = 0.9
+
 __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
 
 __C.TRAIN.ROI_AU = False
@@ -191,7 +196,11 @@ __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
 
-__C.TRAIN.PSEUDO_PATH = 'output/vgg16_cpg_0921/voc_2007_trainval/VGG16_2_iter_10/detections_o.pkl'
+__C.TRAIN.USE_PSEUDO = False
+__C.TRAIN.PSEUDO_PATH = 'data/VOC2007/noise/'
+
+__C.TRAIN.GAN_STEP = 0.0
+__C.TRAIN.GAN_imdb_name = ''
 
 #
 # Testing options

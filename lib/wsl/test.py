@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-"""Test a Fast R-CNN network on an imdb (image database)."""
-
 from configure import cfg, get_output_dir, get_vis_dir
 from utils.timer import Timer
 import numpy as np
@@ -15,53 +7,11 @@ import cv2
 import caffe
 from fast_rcnn.nms_wrapper import nms
 import cPickle
-from utils.blob import im_list_to_blob
+from utils.im_transforms import get_image_blob
 import os
 import time
 import pprint
 from wsl_roi_data_layer.minibatch import get_inner_outer_roi
-
-
-def _get_image_blob(im):
-    """Converts an image into a network input.
-
-    Arguments:
-        im (ndarray): a color image in BGR order
-
-    Returns:
-        blob (ndarray): a data blob holding an image pyramid
-        im_scale_factors (list): list of image scales (relative to im) used
-            in the image pyramid
-    """
-    im_orig = im.astype(np.float32, copy=True)
-    im_orig -= cfg.PIXEL_MEANS
-
-    im_shape = im_orig.shape
-    im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.max(im_shape[0:2])
-
-    processed_ims = []
-    im_scale_factors = []
-
-    for target_size in cfg.TEST.SCALES:
-        im_scale = float(target_size) / float(im_size_min)
-        # Prevent the biggest axis from being more than MAX_SIZE
-        if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
-            im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-        im = cv2.resize(
-            im_orig,
-            None,
-            None,
-            fx=im_scale,
-            fy=im_scale,
-            interpolation=cv2.INTER_LINEAR)
-        im_scale_factors.append(im_scale)
-        processed_ims.append(im)
-
-    # Create a blob to hold the input images
-    blob = im_list_to_blob(processed_ims)
-
-    return blob, np.array(im_scale_factors)
 
 
 def _get_rois_blob(im_rois, im_scale_factors):
@@ -76,12 +26,12 @@ def _get_rois_blob(im_rois, im_scale_factors):
     """
     rois, levels = _project_im_rois(im_rois, im_scale_factors)
     rois_blob = np.hstack((levels, rois))
-    return rois_blob.astype(np.float32, copy=False)
+    return rois_blob.astype(np.float32, copy=False), levels
 
 
 def _get_context_rois_blob(im_rois, im_scale_factors):
-    im_inner_rois, im_outer_rois = get_inner_outer_roi(
-        im_rois, cfg.CONTEXT_RATIO)
+    im_inner_rois, im_outer_rois = get_inner_outer_roi(im_rois,
+                                                       cfg.CONTEXT_RATIO)
 
     rois_inner, levels = _project_im_rois(im_inner_rois, im_scale_factors)
     rois_outer, levels = _project_im_rois(im_outer_rois, im_scale_factors)
@@ -108,7 +58,7 @@ def _project_im_rois(im_rois, scales):
     """
     im_rois = im_rois.astype(np.float32, copy=False)
 
-    if len(scales) > 1:
+    if scales.shape[0] > 1:
         print 'current only support one scale each forward'
         exit()
 
@@ -122,7 +72,19 @@ def _project_im_rois(im_rois, scales):
     else:
         levels = np.zeros((im_rois.shape[0], 1), dtype=np.int)
 
-    rois = im_rois * scales[levels]
+    # rois = im_rois * scales[levels]
+
+    scales_w = scales[:, 1]
+    scales_h = scales[:, 0]
+
+    rois02 = im_rois[:, [0, 2]] * scales_w[levels]
+    rois13 = im_rois[:, [1, 3]] * scales_h[levels]
+
+    rois = im_rois.copy()
+    rois[:, 0] = rois02[:, 0]
+    rois[:, 1] = rois13[:, 0]
+    rois[:, 2] = rois02[:, 1]
+    rois[:, 3] = rois13[:, 1]
 
     return rois, levels
 
@@ -160,14 +122,16 @@ def _get_roi_num_blob(rois_blob):
         idx_im = roi[0]
         num_roi = 0
 
+    roi_num_blob = np.reshape(roi_num_blob, [roi_num_blob.shape[0]])
+
     return roi_num_blob
 
 
 def _get_blobs(im, rois, roi_scores):
     """Convert an image and RoIs within that image into network inputs."""
     blobs = {'data': None, 'rois': None, 'roi_scores': None}
-    blobs['data'], im_scale_factors = _get_image_blob(im)
-    blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
+    blobs['data'], im_scale_factors = get_image_blob(im)
+    blobs['rois'], levels = _get_rois_blob(rois, im_scale_factors)
     blobs['roi_scores'] = _get_roi_scores_blob(roi_scores, im_scale_factors,
                                                len(rois))
     if cfg.CONTEXT:
@@ -202,8 +166,6 @@ def im_detect(net, im, boxes, box_scores):
             hashes, return_index=True, return_inverse=True)
         blobs['rois'] = blobs['rois'][index, :]
         blobs['roi_scores'] = blobs['roi_scores'][index]
-        # boxes = boxes[index, :]
-        # box_scores = box_scores[index]
 
         # print index.shape,inv_index.shape
 
@@ -415,13 +377,13 @@ def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""
     import matplotlib.pyplot as plt
     im = im[:, :, (2, 1, 0)]
+    plt.figure()
+    plt.cla()
+    plt.imshow(im)
     for i in xrange(np.minimum(10, dets.shape[0])):
         bbox = dets[i, :4]
         score = dets[i, -1]
         if score > thresh:
-            plt.figure()
-            plt.cla()
-            plt.imshow(im)
             plt.gca().add_patch(
                 plt.Rectangle(
                     (bbox[0], bbox[1]),
@@ -430,8 +392,9 @@ def vis_detections(im, class_name, dets, thresh=0.3):
                     fill=False,
                     edgecolor='g',
                     linewidth=3))
-            plt.title('{}  {:.3f}'.format(class_name, score))
+            # plt.title('{}  {:.3f}'.format(class_name, score))
             plt.draw()
+    plt.show()
 
 
 def apply_nms(all_boxes, thresh):
@@ -596,8 +559,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
             cls_dets = cls_dets[keep, :]
             if vis:
                 # vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
-                vis_detections_highest(
-                    im, imdb.classes[j], cls_dets, thresh=0.3)
+                # vis_detections_highest(
+                # im, imdb.classes[j], cls_dets, thresh=0.3)
+                vis_detections(im, imdb.classes[j], cls_dets, thresh=0.03)
+
             all_boxes[j][i] = cls_dets
 
             # 保留原始检测结果
@@ -677,6 +642,120 @@ def test_net_ensemble(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
                 for n in xrange(num_images):
                     all_boxes_cache[c][n][:, 4] += all_boxes_cache_this[c][
                         n][:, 4]
+
+    print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
+    print 'all_boxes_cache[0][0]: ', all_boxes_cache[0][0].shape
+    # print 'all_boxes_cache[0][0][0]: ', all_boxes_cache[0][0][0]
+    # print 'all_boxes_cache[14][0]: ', all_boxes_cache[14][0].shape
+    # print 'all_boxes_cache[14][0][0]: ', all_boxes_cache[14][0][0]
+
+    # timers
+    _t = {'im_detect': Timer(), 'misc': Timer()}
+
+    roidb = imdb.roidb
+
+    for i in xrange(num_images):
+        _t['im_detect'].tic()
+        _t['im_detect'].toc()
+
+        _t['misc'].tic()
+        # skip j = 0, because it's the background class
+        # fuck skip
+        for j in xrange(0, imdb.num_classes):
+            # all_scores[j][i] = sum(scores[:, j])
+            all_scores[j][i] = sum(all_boxes_cache[j][i][:, -1])
+
+            # inds = np.where(scores[:, j] > thresh)[0]
+            # cls_scores = scores[inds, j]
+            inds = np.where(all_boxes_cache[j][i][:, -1] > thresh)[0]
+            cls_scores = all_boxes_cache[j][i][inds, -1]
+
+            # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
+            cls_boxes = all_boxes_cache[j][i][inds, 0:4]
+            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+
+            keep = nms(cls_dets, cfg.TEST.NMS)
+            cls_dets = cls_dets[keep, :]
+
+            all_boxes[j][i] = cls_dets
+
+        # Limit to max_per_image detections *over all classes*
+        if max_per_image > 0:
+            image_scores = np.hstack(
+                [all_boxes[j][i][:, -1] for j in xrange(0, imdb.num_classes)])
+            if len(image_scores) > max_per_image:
+                image_thresh = np.sort(image_scores)[-max_per_image]
+                for j in xrange(0, imdb.num_classes):
+                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                    all_boxes[j][i] = all_boxes[j][i][keep, :]
+        _t['misc'].toc()
+
+        print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
+            .format(i + 1, num_images, _t['im_detect'].average_time,
+                    _t['misc'].average_time)
+
+    det_file = os.path.join(output_dir, 'detections.pkl')
+    with open(det_file, 'wb') as f:
+        cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
+
+    print 'Evaluating detections'
+    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
+
+
+def test_net_ensemble2(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
+    print 'max_per_image: ', max_per_image
+    print 'thresh: ', thresh
+
+    num_images = len(imdb.image_index)
+    # all detections are collected into:
+    #    all_boxes[cls][image] = N x 5 array of detections in
+    #    (x1, y1, x2, y2, score)
+    all_boxes = [[[] for _ in xrange(num_images)]
+                 for _ in xrange(imdb.num_classes)]
+    all_scores = [[[] for _ in xrange(num_images)]
+                  for _ in xrange(imdb.num_classes)]
+
+    output_dir = get_output_dir(imdb, None)
+
+    # load all the detection results
+    # all_boxes_cache = None
+    all_boxes_cache = [[[] for _ in xrange(num_images)]
+                       for _ in xrange(imdb.num_classes)]
+    image_index = imdb.image_index
+    for det_dir in det_dirs:
+        p = 1.0
+        if '2' in det_dir:
+            p = 10.0
+        for dirpath, dirnames, filenames in os.walk(det_dir):
+            for filename in filenames:
+                print 'load res: ', os.path.join(dirpath, filename)
+                c = -1
+                for c_i, cls in enumerate(imdb.classes):
+                    if cls + '.txt' in filename:
+                        c = c_i
+                        break
+                assert c > -1
+                with open(os.path.join(dirpath, filename), 'r') as f:
+                    for line in f.readlines():
+                        line = line.strip()
+                        im_id, score, xmin, ymin, xmax, ymax = line.split(' ')
+                        im_i = image_index.index(im_id)
+                        all_boxes_cache[c][im_i].append([
+                            float(xmin) - 1,
+                            float(ymin) - 1,
+                            float(xmax) - 1,
+                            float(ymax) - 1,
+                            float(score) * p
+                        ])
+
+    for n in xrange(num_images):
+        for c in xrange(imdb.num_classes):
+            if len(all_boxes_cache[c][n]) == 0:
+                all_boxes_cache[c][n] = np.zeros((0, 5), dtype=np.float32)
+            else:
+                all_boxes_cache[c][n] = np.array(
+                    all_boxes_cache[c][n], dtype=np.float32)
 
     print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
     print 'all_boxes_cache[0][0]: ', all_boxes_cache[0][0].shape

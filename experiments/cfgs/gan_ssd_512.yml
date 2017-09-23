@@ -1,0 +1,20 @@
+TRAIN:
+        SCALES: [512]
+        MAX_SIZE: 512
+        IMS_PER_BATCH: 8
+        ROIS_PER_IM: 2048
+        SNAPSHOT_ITERS: 1
+        # 512有一个奇怪的BUG，导致不能使用PREFETCH
+        USE_PREFETCH: False
+        PROPOSAL_METHOD: pseudo_gt
+        ASPECT_GROUPING: False
+
+TEST:
+        SCALES: [512]
+        MAX_SIZE: 2000
+        NMS: 0.5
+
+RNG_SEED: 6
+EXP_DIR: gan/ssd
+USE_ROI_SCORE: True
+WSL: False

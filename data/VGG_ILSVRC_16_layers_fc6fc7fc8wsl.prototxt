@@ -1,0 +1,63 @@
+name: "VGG_ILSVRC_16_layers"
+input: "pool5"
+input_dim: 10
+input_dim: 512
+input_dim: 7
+input_dim: 7
+layers {
+  bottom: "pool5"
+  top: "fc6_wsl"
+  name: "fc6_wsl"
+  type: INNER_PRODUCT
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layers {
+  bottom: "fc6_wsl"
+  top: "fc6_wsl"
+  name: "relu6"
+  type: RELU
+}
+layers {
+  bottom: "fc6_wsl"
+  top: "fc6_wsl"
+  name: "drop6"
+  type: DROPOUT
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  bottom: "fc6_wsl"
+  top: "fc7_wsl"
+  name: "fc7_wsl"
+  type: INNER_PRODUCT
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layers {
+  bottom: "fc7_wsl"
+  top: "fc7_wsl"
+  name: "relu7"
+  type: RELU
+}
+layers {
+  bottom: "fc7_wsl"
+  top: "fc7_wsl"
+  name: "drop7"
+  type: DROPOUT
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  bottom: "fc7_wsl"
+  top: "fc8_wsl"
+  name: "fc8_wsl"
+  type: INNER_PRODUCT
+  inner_product_param {
+    num_output: 1000
+  }
+}

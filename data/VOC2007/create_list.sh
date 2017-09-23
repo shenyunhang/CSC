@@ -1,6 +1,6 @@
 #!/bin/bash
 
-root_dir=$HOME/data/VOCdevkit/
+root_dir=data/VOCdevkit2007
 sub_dir=ImageSets/Main
 bash_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for dataset in trainval test
@@ -36,16 +36,18 @@ do
 	done
 
 	# Generate image name and size infomation.
-	if [ $dataset == "test" ]
-	then
-		$bash_dir/../../caffe-fwsl/build/tools/get_image_size $root_dir $dst_file $bash_dir/$dataset"_name_size.txt"
-	fi
+	#if [ $dataset == "test" ]
+	#then
+	$bash_dir/../../caffe-fwsl/build/tools/get_image_size $root_dir $dst_file $bash_dir/$dataset"_name_size.txt"
+	#fi
 
 	# Shuffle trainval file.
 	if [ $dataset == "trainval" ]
 	then
 		rand_file=$dst_file.random
+		dst_file_nr=$bash_dir/${dataset}_norandom.txt
 		cat $dst_file | perl -MList::Util=shuffle -e 'print shuffle(<STDIN>);' > $rand_file
+		cp $dst_file $dst_file_nr
 		mv $rand_file $dst_file
 	fi
 done

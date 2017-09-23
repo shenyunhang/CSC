@@ -1,5 +1,5 @@
 selective_search*
-imagenet_models*
+imagenet_models
 fast_rcnn_models*
 VOCdevkit*
 cache
@@ -8,3 +8,5 @@ edge_boxes_data*
 faster_rcnn_models*
 *.tgz
 *.mat
+*.caffemodel
+*.xml

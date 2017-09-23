@@ -1,0 +1,25 @@
+TRAIN:
+        MAX_SIZE: 2000
+        IMS_PER_BATCH: 1
+        ROIS_PER_IM: 2048
+        SNAPSHOT_ITERS: 1
+        USE_PREFETCH: True
+        PROPOSAL_METHOD: mcg
+        ASPECT_GROUPING: False
+
+        USE_EXPAND: False
+        USE_SAMPLE: False
+        USE_CROP: False
+
+TEST:
+        MAX_SIZE: 2000
+        NMS: 0.5
+        PROPOSAL_METHOD: mcg
+        USE_FLIPPED: False
+
+RESIZE_MODE: 'FIT_SMALLEST'
+DEDUP_BOXES: 0.0
+RNG_SEED: 6
+EXP_DIR: fwsl/fwsl
+USE_ROI_SCORE: True
+WSL: True

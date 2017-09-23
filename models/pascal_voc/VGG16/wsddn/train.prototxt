@@ -1,7 +1,6 @@
 name: "VGG_ILSVRC_16_layers"
 layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'roi_num' top: 'labels'
-	#top: 'opg_filter' top: 'opg_io'
-	python_param { module: 'roi_data_layer.layer_wsl' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
+	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"

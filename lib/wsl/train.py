@@ -1,7 +1,10 @@
 import caffe
+
 from configure import cfg
 import wsl_roi_data_layer.roidb as wrdl_roidb
 from utils.timer import Timer
+from datasets.factory import get_imdb
+
 import numpy as np
 import os
 
@@ -50,6 +53,11 @@ class SolverWrapper(object):
         self.solver.net.layers[0].set_roidb(roidb)
         self.train_ims_num = len(roidb)
         print 'self.train_ims_num: ', self.train_ims_num
+
+        self.gan_step = int(
+            1.0 * (cfg.TRAIN.GAN_STEP * self.train_ims_num) /
+            (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH))
+        print 'self.gan_step: ', self.gan_step
 
     def snapshot(self):
         """Take a snapshot of the network after unnormalizing the learned
@@ -103,9 +111,22 @@ class SolverWrapper(object):
                 last_snapshot_iter = self.solver.iter
                 model_paths.append(self.snapshot())
 
+            self.load_dataset()
+
         if last_snapshot_iter != self.solver.iter:
             model_paths.append(self.snapshot())
         return model_paths
+
+    def load_dataset(self):
+        if self.gan_step == 0:
+            return
+        if self.solver.iter % self.gan_step == 0:
+            print 'loading dataset...'
+            imdb, roidb = combined_roidb(cfg.TRAIN.GAN_imdb_name)
+
+            self.solver.net.layers[0].set_roidb(roidb)
+            self.train_ims_num = len(roidb)
+            print 'self.train_ims_num: ', self.train_ims_num
 
 
 def get_training_roidb(imdb):
@@ -120,6 +141,17 @@ def get_training_roidb(imdb):
     print 'done'
 
     return imdb.roidb
+
+
+def combined_roidb(imdb_names):
+    # treat as only one dataset
+    imdb = get_imdb(imdb_names)
+
+    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
+    imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
+    print 'Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD)
+    roidb = get_training_roidb(imdb)
+    return imdb, roidb
 
 
 def train_net(solver_prototxt,

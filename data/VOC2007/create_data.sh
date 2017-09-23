@@ -6,7 +6,7 @@ root_dir=$cur_dir/../..
 cd $root_dir
 
 redo=1
-data_root_dir="$HOME/data/VOCdevkit"
+data_root_dir="data/VOCdevkit2007"
 dataset_name="VOC2007"
 mapfile="$root_dir/data/$dataset_name/labelmap_voc.prototxt"
 anno_type="detection"
@@ -25,3 +25,6 @@ for subset in test trainval
 do
 	python $root_dir/tools/ssd/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/$subset.txt $root_dir/data/$dataset_name/$db/$dataset_name"_"$subset"_"$db
 done
+
+subset="trainval_norandom"
+python $root_dir/tools/ssd/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/$subset.txt $root_dir/data/$dataset_name/$db/$dataset_name"_"$subset"_"$db

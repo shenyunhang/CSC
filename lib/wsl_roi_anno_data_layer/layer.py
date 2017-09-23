@@ -131,22 +131,6 @@ class RoIDataLayer(caffe.Layer):
         self._name_to_top_map['label'] = idx
         idx += 1
 
-        if cfg.TRAIN.OPG_CACHE and len(top) > idx:
-            if os.path.exists(cfg.TRAIN.OPG_CACHE_PATH):
-                shutil.rmtree(cfg.TRAIN.OPG_CACHE_PATH)
-            os.makedirs(cfg.TRAIN.OPG_CACHE_PATH)
-
-            top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM,
-                             self._num_classes)
-            self._name_to_top_map['opg_filter'] = idx
-            idx += 1
-
-            top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH, 1)
-            self._name_to_top_map['opg_io'] = idx
-            idx += 1
-        else:
-            cfg.TRAIN.OPG_CACHE = False
-
         print 'RoiDataLayer: name_to_top:', self._name_to_top_map
         assert len(top) == len(self._name_to_top_map)
 
@@ -155,6 +139,7 @@ class RoIDataLayer(caffe.Layer):
         blobs = self._get_next_minibatch()
 
         if False:
+        # if True:
             vis_minibatch(
                 blobs['data'].copy(),
                 blobs['roi'].copy(),

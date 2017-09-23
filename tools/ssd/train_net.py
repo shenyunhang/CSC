@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Train a Fast R-CNN network on a region of interest database."""
-
 import _init_paths
 from ssd.train import get_training_roidb, train_net
 from ssd.config import cfg_ssd
@@ -108,6 +99,8 @@ if __name__ == '__main__':
 
     imdb, roidb = combined_roidb(args.imdb_name)
     print '{:d} roidb entries'.format(len(roidb))
+
+    cfg.TRAIN.GAN_imdb_name=args.imdb_name
 
     output_dir = get_output_dir(imdb)
     print 'Output will be saved to `{:s}`'.format(output_dir)

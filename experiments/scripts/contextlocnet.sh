@@ -69,7 +69,7 @@ echo ---------------------------------------------------------------------
 echo showing the solver file:
 cat "models/${PT_DIR}/${NET}/contextlocnet/solver.prototxt"
 echo ---------------------------------------------------------------------
-time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
 	--solver models/${PT_DIR}/${NET}/contextlocnet/solver.prototxt \
 	--weights data/imagenet_models/${NET}.v2.caffemodel \
 	--imdb ${TRAIN_IMDB} \
@@ -81,7 +81,7 @@ echo ---------------------------------------------------------------------
 echo showing the solver file:
 cat "models/${PT_DIR}/${NET}/contextlocnet/solver2.prototxt"
 echo ---------------------------------------------------------------------
-time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
 	--solver models/${PT_DIR}/${NET}/contextlocnet/solver2.prototxt \
 	--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS2}.caffemodel \
 	--imdb ${TRAIN_IMDB} \
@@ -94,7 +94,7 @@ set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
 set -x
 
-time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--def models/${PT_DIR}/${NET}/contextlocnet/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \

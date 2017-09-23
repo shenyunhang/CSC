@@ -63,6 +63,13 @@ class AnnotatedDataLayer(caffe.Layer):
         self._roidb = roidb
         self._shuffle_roidb_inds()
         if cfg.TRAIN.USE_PREFETCH:
+            try:
+                print 'Trying to terminating old _prefetch_process'
+                self._prefetch_process.terminate()
+                self._prefetch_process.join()
+            except Exception, e:
+                print Exception, ":", e
+
             self._blob_queue = Queue(1280)
             self._prefetch_process = BlobFetcher(self._blob_queue, self._roidb,
                                                  self._num_classes)
@@ -142,8 +149,6 @@ class BlobFetcher(Process):
         self._num_classes = num_classes
         self._perm = None
         self._cur = 0
-        # fix the random seed for reproducibility
-        np.random.seed(cfg.RNG_SEED)
 
         self._shuffle_roidb_inds()
 

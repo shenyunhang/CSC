@@ -1,7 +1,10 @@
 import caffe
+
 from configure import cfg
 import anno_data_layer.roidb as adl_roidb
 from utils.timer import Timer
+from datasets.factory import get_imdb
+
 import numpy as np
 import os
 
@@ -51,6 +54,11 @@ class SolverWrapper(object):
         self.train_ims_num = len(roidb)
         print 'self.train_ims_num: ', self.train_ims_num
 
+        self.gan_step = int(
+            1.0 * (cfg.TRAIN.GAN_STEP * self.train_ims_num) /
+            (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH))
+        print 'self.gan_step: ', self.gan_step
+
     def snapshot(self):
         """Take a snapshot of the network after unnormalizing the learned
         bounding-box regression weights. This enables easy use at test-time.
@@ -75,41 +83,22 @@ class SolverWrapper(object):
     def train_model(self, max_iters):
         """Network training loop."""
 
-        self.solver.solve()
-        return
-
-        last_snapshot_iter = -1
-        timer = Timer()
-        model_paths = []
-
-        self.steps_num = (max_iters * self.train_ims_num) / \
-            (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)
-        self.steps_snapshot = (cfg.TRAIN.SNAPSHOT_ITERS * self.train_ims_num) / \
-            (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)
-        if cfg.TRAIN.USE_FLIPPED:
-            self.steps_num /= 2
-            self.steps_snapshot /= 2
-
-        # TODO(YH): uncommit for visualization middle model
-        # self.steps_snapshot/=2
-
-        print 'steps_num: ', self.steps_num
-        print 'steps_snapshot: ', self.steps_snapshot
-        while self.solver.iter < self.steps_num:
-            # Make one SGD update
-            timer.tic()
+        # self.solver.solve()
+        # return
+        while self.solver.iter < self.solver_param.max_iter:
             self.solver.step(1)
-            timer.toc()
-            if self.solver.iter % (10 * self.solver_param.display) == 0:
-                print 'speed: {:.3f}s / iter'.format(timer.average_time)
+            self.load_dataset()
 
-            if self.solver.iter % self.steps_snapshot == 0:
-                last_snapshot_iter = self.solver.iter
-                model_paths.append(self.snapshot())
+    def load_dataset(self):
+        if self.gan_step == 0:
+            return
+        if self.solver.iter % self.gan_step == 0:
+            print 'loading dataset...'
+            imdb, roidb = combined_roidb(cfg.TRAIN.GAN_imdb_name)
 
-        if last_snapshot_iter != self.solver.iter:
-            model_paths.append(self.snapshot())
-        return model_paths
+            self.solver.net.layers[0].set_roidb(roidb)
+            self.train_ims_num = len(roidb)
+            print 'self.train_ims_num: ', self.train_ims_num
 
 
 def get_training_roidb(imdb):
@@ -124,6 +113,17 @@ def get_training_roidb(imdb):
     print 'done'
 
     return imdb.roidb
+
+
+def combined_roidb(imdb_names):
+    # treat as only one dataset
+    imdb = get_imdb(imdb_names)
+
+    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
+    imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
+    print 'Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD)
+    roidb = get_training_roidb(imdb)
+    return imdb, roidb
 
 
 def train_net(solver_prototxt,

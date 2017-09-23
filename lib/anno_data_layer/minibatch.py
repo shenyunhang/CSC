@@ -23,7 +23,6 @@ def get_minibatch(roidb, num_classes):
     for i_im in xrange(num_images):
         # 处理图像
         img = cv2.imread(roidb[i_im]['image'])
-        img = img.astype(np.float32)
         if roidb[i_im]['flipped']:
             img = img[:, ::-1, :]
 
@@ -44,14 +43,6 @@ def get_minibatch(roidb, num_classes):
         if cfg.TRAIN.USE_DISTORTION:
             img = utils.im_transforms.ApplyDistort(img)
         # vis(img, roi, show_name='distortion')
-
-        #-------------------------------------------------------------
-        # crop_bbox is define as RoIs with form (x1,y1,x2,y2)
-        # if cfg.TRAIN.USE_CROP:
-        # img, crop_bbox = utils.im_transforms.ApplyCrop(img)
-        # else:
-        # crop_bbox = np.array(
-        # [0, 0, img.shape[0] - 1, img.shape[1] - 1], dtype=np.uint16)
 
         #-------------------------------------------------------------
         # expand_bbox is define as RoIs with form (x1,y1,x2,y2)
@@ -82,10 +73,10 @@ def get_minibatch(roidb, num_classes):
                     img_shape=img.shape)
         # vis(img, roi, show_name='sample')
 
-            #-------------------------------------------------------------
+        #-------------------------------------------------------------
         target_size = cfg.TRAIN.SCALES[random_scale_inds[i_im]]
-        img, img_scale = prep_im_for_blob(img, cfg.PIXEL_MEANS, target_size,
-                                          cfg.TRAIN.MAX_SIZE)
+        img, img_scale = utils.im_transforms.prep_im_for_blob(
+            img, cfg.PIXEL_MEANS, target_size, cfg.TRAIN.MAX_SIZE)
 
         processed_ims.append(img)
 
@@ -103,7 +94,7 @@ def get_minibatch(roidb, num_classes):
             roi, width=img.shape[1], height=img.shape[0])
 
         # 归一化
-        roi = _normalize_img_roi(roi, img.shape)
+        roi = utils.im_transforms.normalize_img_roi(roi, img.shape)
 
         #-------------------------------------------------------------
         instance_id = np.zeros_like(gt_classes)
@@ -137,72 +128,6 @@ def get_minibatch(roidb, num_classes):
     return blobs
 
 
-def prep_im_for_blob(im, pixel_means, target_size, max_size):
-    """Mean subtract and scale an image for use in a blob."""
-    im = im.astype(np.float32, copy=False)
-    im -= pixel_means
-    im_shape = im.shape
-
-    #-------------------------------------------------------------
-    interp_mode = cv2.INTER_LINEAR
-    if len(cfg.TRAIN.INTERP_MODEL) > 0:
-        idx = npr.randint(len(cfg.TRAIN.INTERP_MODEL))
-        interp_name = cfg.TRAIN.INTERP_MODEL[idx]
-        if interp_name == 'LINEAR':
-            interp_mode = cv2.INTER_LINEAR
-        elif interp_name == 'AREA':
-            interp_mode = cv2.INTER_AREA
-        elif interp_name == 'NEAREST':
-            interp_mode = cv2.INTER_NEAREST
-        elif interp_name == 'CUBIC':
-            interp_mode = cv2.INTER_CUBIC
-        elif interp_name == 'LANCZOS4':
-            interp_mode = cv2.INTER_LANCZOS4
-        else:
-            print 'Unknow interp mode: ', interp_name
-            exit(0)
-
-    if cfg.RESIZE_MODE == 'WARP':
-        im_scale_h = float(target_size) / float(im_shape[0])
-        im_scale_w = float(target_size) / float(im_shape[1])
-        im = cv2.resize(
-            im,
-            None,
-            None,
-            fx=im_scale_w,
-            fy=im_scale_h,
-            interpolation=interp_mode)
-        im_scale = [im_scale_h, im_scale_w]
-    elif cfg.RESIZE_MODE == 'FIT_SMALLEST':
-        im_size_min = np.min(im_shape[0:2])
-        im_size_max = np.max(im_shape[0:2])
-        im_scale = float(target_size) / float(im_size_min)
-        # Prevent the biggest axis from being more than MAX_SIZE
-        if np.round(im_scale * im_size_max) > max_size:
-            im_scale = float(max_size) / float(im_size_max)
-        im = cv2.resize(
-            im,
-            None,
-            None,
-            fx=im_scale,
-            fy=im_scale,
-            interpolation=interp_mode)
-        im_scale = [im_scale, im_scale]
-    else:
-        print 'Unknow resize mode.'
-
-    return im, im_scale
-
-
-def _normalize_img_roi(img_roi, img_shape):
-    roi_normalized = np.copy(img_roi)
-    roi_normalized[:, 0] = roi_normalized[:, 0] / img_shape[1]
-    roi_normalized[:, 1] = roi_normalized[:, 1] / img_shape[0]
-    roi_normalized[:, 2] = roi_normalized[:, 2] / img_shape[1]
-    roi_normalized[:, 3] = roi_normalized[:, 3] / img_shape[0]
-    return roi_normalized
-
-
 def _transform_img_roi(roi,
                        score_or_label,
                        do_crop=False,
@@ -214,7 +139,7 @@ def _transform_img_roi(roi,
         roi = _UpdateBBoxByResizePolicy(roi, img_scale)
 
     if do_crop:
-        roi, score_or_label = _project_img_roi(roi, score_or_label, crop_bbox)
+        roi, score_or_label = _project_img_rois(roi, score_or_label, crop_bbox)
 
     roi[:, 0] = np.minimum(np.maximum(roi[:, 0], 0), img_shape[1] - 1)
     roi[:, 1] = np.minimum(np.maximum(roi[:, 1], 0), img_shape[0] - 1)
@@ -224,7 +149,7 @@ def _transform_img_roi(roi,
     return roi, score_or_label
 
 
-def _project_img_roi(roi, score_or_label, src_bbox):
+def _project_img_rois(roi, score_or_label, src_bbox):
     num_roi = roi.shape[0]
     roi_ = []
     score_or_label_ = []
@@ -289,7 +214,7 @@ def vis(img,
 
     im = im.transpose(channel_swap)
 
-    im += pixel_means
+    im += pixel_means.astype(im.dtype)
     im = im.astype(np.uint8).copy()
 
     height = im.shape[0]

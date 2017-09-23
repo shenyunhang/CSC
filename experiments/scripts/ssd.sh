@@ -86,5 +86,5 @@ time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
 	--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
-	--cfg experiments/cfgs/ssd.yml \
+	--cfg experiments/cfgs/ssd_300.yml \
 	${EXTRA_ARGS}

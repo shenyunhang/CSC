@@ -1,5 +1,6 @@
 TRAIN:
-        SCALES: [480, 576, 688, 864, 1200]
+        #SCALES: [480, 576, 688, 864, 1200]
+        SCALES: [400, 496, 608, 720, 864]
         MAX_SIZE: 2000
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
@@ -7,18 +8,19 @@ TRAIN:
         USE_DISTORTION: False
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
-        PROPOSAL_METHOD: edge_boxes
+        PROPOSAL_METHOD: selective_search
         ASPECT_GROUPING: False
         OPG_CACHE: False
 
 TEST:
-        SCALES: [480, 576, 688, 864, 1200]
+        #SCALES: [480, 576, 688, 864, 1200]
+        SCALES: [400, 496, 608, 720, 864]
         MAX_SIZE: 2000
         NMS: 0.4
-        PROPOSAL_METHOD: edge_boxes
+        PROPOSAL_METHOD: selective_search
 RNG_SEED: 6
 EXP_DIR: contextlocnet 
 CONTEXT: True
-USE_ROI_SCORE: True
+USE_ROI_SCORE: False
 USE_BG: False
 WSL: True

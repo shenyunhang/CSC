@@ -1,19 +1,20 @@
 TRAIN:
         SCALES: [300]
-        MAX_SIZE: 2000
-        IMS_PER_BATCH: 1
+        # TODO(YH): 为了batchsize32
+        MAX_SIZE: 300
+        IMS_PER_BATCH: 32
         ROIS_PER_IM: 2048
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
-        PROPOSAL_METHOD: mcg
+        PROPOSAL_METHOD: pseudo_gt
         ASPECT_GROUPING: False
 
 TEST:
         SCALES: [300]
         MAX_SIZE: 2000
         NMS: 0.5
-        PROPOSAL_METHOD: mcg
+
 RNG_SEED: 6
-EXP_DIR: fwsl
+EXP_DIR: gan/ssd
 USE_ROI_SCORE: True
-WSL: True
+WSL: False

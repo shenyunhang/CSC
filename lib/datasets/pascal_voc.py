@@ -23,7 +23,6 @@ import cv2
 
 
 class pascal_voc(imdb):
-
     def __init__(self, image_set, year, devkit_path=None):
         imdb.__init__(self, 'voc_' + year + '_' + image_set)
         self._year = year
@@ -31,12 +30,28 @@ class pascal_voc(imdb):
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
-        self._classes = ('__background__',  # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+        self._classes = (
+            '__background__',  # always index 0
+            'aeroplane',
+            'bicycle',
+            'bird',
+            'boat',
+            'bottle',
+            'bus',
+            'car',
+            'cat',
+            'chair',
+            'cow',
+            'diningtable',
+            'dog',
+            'horse',
+            'motorbike',
+            'person',
+            'pottedplant',
+            'sheep',
+            'sofa',
+            'train',
+            'tvmonitor')
         if cfg.WSL:
             # remove the _background_ class
             self._classes = self._classes[1:]
@@ -53,16 +68,18 @@ class pascal_voc(imdb):
         # Default to roidb handler
         self._roidb_handler = self.selective_search_roidb
         self._salt = str(uuid.uuid4())
-        self._comp_id = 'comp4'
+        self._comp_id = 'comp3'
         self._comp_id_cls = 'comp1'
 
         # PASCAL specific config options
-        self.config = {'cleanup': True,
-                       'use_salt': True,
-                       'use_diff': False,
-                       'matlab_eval': False,
-                       'rpn_file': None,
-                       'min_size': 20}
+        self.config = {
+            'cleanup': True,
+            'use_salt': True,
+            'use_diff': False,
+            'matlab_eval': False,
+            'rpn_file': None,
+            'min_size': 20
+        }
 
         assert os.path.exists(self._devkit_path), \
             'VOCdevkit path does not exist: {}'.format(self._devkit_path)
@@ -70,11 +87,13 @@ class pascal_voc(imdb):
             'Path does not exist: {}'.format(self._data_path)
 
         # test split of PASCAL VOC >2007
-        if 'test' in self._name and int(self._year) > 2007:
-            return
+        # if 'test' in self._name and int(self._year) > 2007:
+            # return
 
-        self._gt_classes = {ix: self._load_pascal_classes_annotation(
-            ix) for ix in self._image_index}
+        self._gt_classes = {
+            ix: self._load_pascal_classes_annotation(ix)
+            for ix in self._image_index
+        }
 
     def _remove_ims(self):
         self._image_index_old = self._image_index
@@ -90,6 +109,29 @@ class pascal_voc(imdb):
 
         print 'original image number: ', len(self._image_index_old)
         print 'left image number:', len(self._image_index)
+
+    def _remove_ims2(self, blacklist):
+        self._image_index_old = self._image_index
+        self._image_index = []
+        self._image_left = []
+        for index in self._image_index_old:
+            if index not in blacklist:
+                self._image_index.append(index)
+                self._image_left.append(1)
+            else:
+                self._image_left.append(0)
+
+        print 'original image number: ', len(self._image_index_old)
+        print 'left image number:', len(self._image_index)
+
+        # test split of PASCAL VOC >2007
+        # if 'test' in self._name and int(self._year) > 2007:
+            # return
+
+        self._gt_classes = {
+            ix: self._load_pascal_classes_annotation(ix)
+            for ix in self._image_index
+        }
 
     def image_classes_at(self, i):
         """
@@ -153,8 +195,21 @@ class pascal_voc(imdb):
         # print '{} gt roidb loaded from {}'.format(self.name, cache_file)
         # return roidb
 
-        gt_roidb = [self._load_pascal_annotation(index)
-                    for index in self.image_index]
+        if cfg.TRAIN.has_key(
+                'USE_PSEUDO'
+        ) and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+            tmp = self._data_path
+            self._data_path = cfg.TRAIN.PSEUDO_PATH
+
+        gt_roidb = [
+            self._load_pascal_annotation(index) for index in self.image_index
+        ]
+
+        if cfg.TRAIN.has_key(
+                'USE_PSEUDO'
+        ) and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+            self._data_path = tmp
+
         # with open(cache_file, 'wb') as fid:
         # cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         # print 'wrote gt roidb to {}'.format(cache_file)
@@ -168,11 +223,13 @@ class pascal_voc(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
 
+        assert 'trainval' in self.name, 'Only trainval dataset has pseudo gt.'
+
         # detection.pkl is 0-based indices
         # the VOC result file is 1-based indices
 
-        cache_file = cfg.PSEUDO_PATH
-        assert os.path.exists(cache_file)
+        cache_file = cfg.TRAIN.PSEUDO_PATH
+        assert os.path.exists(cache_file), cache_file
         with open(cache_file, 'rb') as fid:
             roidb = cPickle.load(fid)
         print '{} pseudo gt roidb loaded from {}'.format(self.name, cache_file)
@@ -185,11 +242,16 @@ class pascal_voc(imdb):
         else:
             raise Exception('Unknown mode.')
 
+        threshold = 0.9
+
         gt_roidb = []
+        blacklist = []
         for im_i, ix in enumerate(self._image_index):
             if im_i % 1000 == 0:
                 print '{:d} / {:d}'.format(im_i + 1, self.num_images)
             num_objs = 0
+
+            img_size = PIL.Image.open(self.image_path_at(im_i)).size
 
             # when cfg.WSL = False, background class is in.
             # detection.pkl only has 20 classes
@@ -197,16 +259,35 @@ class pascal_voc(imdb):
             for cls in range(1, self.num_classes):
                 # TODO(YH): we need threshold the pseudo label
                 # filter the pseudo label
+
                 # self._gt_class has 21 classes
                 if self._gt_classes[ix][cls] == 0:
                     continue
                 dets = roidb[cls + cls_offset][im_i]
-                # num_objs += bbox.shape[0]
+
                 # TODO(YH): keep only one box
-                if dets.shape[0] > 0:
+                # if dets.shape[0] > 0:
+                # num_objs += 1
+
+                max_score = 0
+                num_objs_cls = 0
+                for i in range(dets.shape[0]):
+                    det = dets[i]
+
+                    score = det[4]
+                    if score > max_score:
+                        max_score = score
+                    if score < threshold:
+                        continue
                     num_objs += 1
+                    num_objs_cls += 1
+
+                if num_objs_cls == 0:
+                    if max_score > 0:
+                        num_objs += 1
 
             if num_objs == 0:
+                blacklist.append(ix)
                 continue
 
             boxes = np.zeros((num_objs, 4), dtype=np.uint16)
@@ -226,6 +307,8 @@ class pascal_voc(imdb):
                     continue
 
                 max_score = 0
+                max_score_bb = []
+                num_objs_cls = 0
                 for i in range(dets.shape[0]):
                     det = dets[i]
                     x1 = det[0]
@@ -234,18 +317,43 @@ class pascal_voc(imdb):
                     y2 = det[3]
 
                     score = det[4]
-                    if score <= max_score:
+                    if score > max_score:
+                        max_score = score
+                        max_score_bb = [x1, y1, x2, y2]
+                    if score < threshold:
                         continue
-                    max_score = score
 
+                    assert x1 >= 0
+                    assert y1 >= 0
                     assert x2 >= x1
                     assert y2 >= y1
+                    assert x2 < img_size[0]
+                    assert y2 < img_size[1]
+
                     boxes[obj_i, :] = [x1, y1, x2, y2]
                     gt_classes[obj_i] = cls
                     overlaps[obj_i, cls] = 1.0
                     seg_areas[obj_i] = (x2 - x1 + 1) * (y2 - y1 + 1)
 
-                obj_i += 1
+                    obj_i += 1
+                    num_objs_cls += 1
+
+                if num_objs_cls == 0:
+                    x1, y1, x2, y2 = max_score_bb[:]
+
+                    assert x1 >= 0
+                    assert y1 >= 0
+                    assert x2 >= x1
+                    assert y2 >= y1
+                    assert x2 < img_size[0]
+                    assert y2 < img_size[1]
+
+                    boxes[obj_i, :] = [x1, y1, x2, y2]
+                    gt_classes[obj_i] = cls
+                    overlaps[obj_i, cls] = 1.0
+                    seg_areas[obj_i] = (x2 - x1 + 1) * (y2 - y1 + 1)
+
+                    obj_i += 1
 
             assert obj_i == num_objs
 
@@ -253,31 +361,33 @@ class pascal_voc(imdb):
             # if True:
             if False:
                 im = cv2.imread(self.image_path_at(im_i))
-                print boxes
                 for obj_i in range(num_objs):
-                    cv2.rectangle(
-                        im,
-                        (boxes[obj_i][0],
-                         boxes[obj_i][1]),
-                        (boxes[obj_i][2],
-                         boxes[obj_i][3]),
-                        (255,
-                         0,
-                         0),
-                        5)
-                cv2.imshow('im',im)
+                    cv2.rectangle(im, (boxes[obj_i][0], boxes[obj_i][1]),
+                                  (boxes[obj_i][2], boxes[obj_i][3]), (255, 0,
+                                                                       0), 5)
+                cv2.imshow('im', im)
                 cv2.waitKey()
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
 
-            gt_roidb.append(
-                {'boxes': boxes,
-                 'box_scores': np.ones((num_objs, 1), dtype=np.float32),
-                 'gt_classes': gt_classes,
-                 'gt_overlaps': overlaps,
-                 'flipped': False,
-                 'seg_areas': seg_areas}
-            )
+            gt_roidb.append({
+                'boxes':
+                boxes,
+                'box_scores':
+                np.ones((num_objs, 1), dtype=np.float32),
+                'gt_classes':
+                gt_classes,
+                'gt_overlaps':
+                overlaps,
+                'flipped':
+                False,
+                'seg_areas':
+                seg_areas
+            })
+
+        self._remove_ims2(blacklist)
+        assert len(gt_roidb) == len(self._image_index), '{} vs {}'.format(
+            len(gt_roidb), len(self._image_index))
 
         return gt_roidb
 
@@ -298,30 +408,32 @@ class pascal_voc(imdb):
         # print '{} ss roidb loaded from {}'.format(self.name, cache_file)
         # return roidb
 
-        if cfg.WSL and not cfg.USE_PSEUDO:
+        if cfg.WSL:
+            assert ('USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO)
             # WSL train and test
             roidb = self._load_selective_search_roidb(None)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'trainval' in self.name:
-            # WSL fast rcnn train
-            pseudo_gt_roidb = self.pseudo_gt_roidb()
-            ss_roidb = self._load_selective_search_roidb(pseudo_gt_roidb)
-            roidb = imdb.merge_roidbs(pseudo_gt_roidb, ss_roidb)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
-            # WSL fast rcnn test
-            roidb = self._load_selective_search_roidb(None)
-        elif not cfg.WSL and not cfg.USE_PSEUDO:
-            # Fast rcnn train and test
-            if (int(self._year) == 2007 or self._image_set != 'test'):
-                gt_roidb = self.gt_roidb()
-                ss_roidb = self._load_selective_search_roidb(gt_roidb)
-                roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
-            else:
-                roidb = self._load_selective_search_roidb(None)
         else:
-            raise Exception('Not implement mode.')
+            if 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+                # WSL fast rcnn train
+                pseudo_gt_roidb = self.pseudo_gt_roidb()
+                ss_roidb = self._load_selective_search_roidb(pseudo_gt_roidb)
+                roidb = imdb.merge_roidbs(pseudo_gt_roidb, ss_roidb)
+            elif 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'test' in self.name:
+                # WSL fast rcnn test
+                roidb = self._load_selective_search_roidb(None)
+            elif 'USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO:
+                # Fast rcnn train and test
+                if (int(self._year) == 2007 or self._image_set != 'test'):
+                    gt_roidb = self.gt_roidb()
+                    ss_roidb = self._load_selective_search_roidb(gt_roidb)
+                    roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
+                else:
+                    roidb = self._load_selective_search_roidb(None)
+            else:
+                raise Exception('Not implement mode.')
 
         # with open(cache_file, 'wb') as fid:
-            # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         # print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
@@ -343,53 +455,58 @@ class pascal_voc(imdb):
         # print '{} ss roidb loaded from {}'.format(self.name, cache_file)
         # return roidb
 
-        if cfg.WSL and not cfg.USE_PSEUDO:
+        if cfg.WSL:
+            assert ('USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO)
             # WSL train and test
             roidb = self._load_edge_boxes_roidb(None)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'trainval' in self.name:
-            # WSL fast rcnn train
-            pseudo_gt_roidb = self.pseudo_gt_roidb()
-            eb_roidb = self._load_edge_boxes_roidb(pseudo_gt_roidb)
-            roidb = imdb.merge_roidbs(pseudo_gt_roidb, eb_roidb)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
-            # WSL fast rcnn test
-            roidb = self._load_edge_boxes_roidb(None)
-        elif not cfg.WSL and not cfg.USE_PSEUDO:
-            # Fast rcnn train and test
-            if (int(self._year) == 2007 or self._image_set != 'test'):
-                gt_roidb = self.gt_roidb()
-                eb_roidb = self._load_edge_boxes_roidb(gt_roidb)
-                roidb = imdb.merge_roidbs(gt_roidb, eb_roidb)
-            else:
-                roidb = self._load_edge_boxes_roidb(None)
         else:
-            raise Exception('Not implement mode.')
+            if 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+                # WSL fast rcnn train
+                pseudo_gt_roidb = self.pseudo_gt_roidb()
+                eb_roidb = self._load_edge_boxes_roidb(pseudo_gt_roidb)
+                roidb = imdb.merge_roidbs(pseudo_gt_roidb, eb_roidb)
+            elif 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'test' in self.name:
+                # WSL fast rcnn test
+                roidb = self._load_edge_boxes_roidb(None)
+            elif 'USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO:
+                # Fast rcnn train and test
+                if (int(self._year) == 2007 or self._image_set != 'test'):
+                    gt_roidb = self.gt_roidb()
+                    eb_roidb = self._load_edge_boxes_roidb(gt_roidb)
+                    roidb = imdb.merge_roidbs(gt_roidb, eb_roidb)
+                else:
+                    roidb = self._load_edge_boxes_roidb(None)
+            else:
+                raise Exception('Not implement mode.')
 
         # with open(cache_file, 'wb') as fid:
-            # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         # print 'wrote eb roidb to {}'.format(cache_file)
 
         return roidb
 
     def _load_edge_boxes_roidb(self, gt_roidb):
-        filename = os.path.abspath(os.path.join(cfg.DATA_DIR,
-                                                'EdgeBoxes_' +
-                                                self.name + '.mat'))
-        assert os.path.exists(filename), \
-            'Edge boxes data not found at: {}'.format(filename)
-        raw_data = sio.loadmat(filename)['boxes'].ravel()
+        filename = os.path.abspath(
+            os.path.join(cfg.DATA_DIR, 'EdgeBoxes' + self.name.replace(
+                '_', '').replace('voc', 'VOC') + '.mat'))
+        assert os.path.exists(
+            filename
+        ), 'Edge boxes data not found at: {}\nplease download files from https://drive.google.com/open?id=0B0evBVYO74MENXZCWnZmT2kyUEE and https://drive.google.com/file/d/0B0evBVYO74MEMUluNm4tamEyMHM'.format(
+            filename)
+        raw_bboxes = sio.loadmat(filename)['boxes'].ravel()
+        raw_scores = sio.loadmat(filename)['boxScores'].ravel()
 
         box_list = []
-        for i in xrange(raw_data.shape[0]):
-            box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
+        score_list = []
+        for i in xrange(raw_bboxes.shape[0]):
+            box_list.append(raw_bboxes[i][:, (1, 0, 3, 2)] - 1)
+            score_list.append(raw_scores[i][:, :])
 
-        return self.create_roidb_from_box_list(box_list, gt_roidb, None)
-
+        return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def _load_edge_boxes_roidb_orig(self, gt_roidb):
-        filename = os.path.abspath(os.path.join(cfg.DATA_DIR,
-                                                'EdgeBoxes70_' +
-                                                self.name + '.mat'))
+        filename = os.path.abspath(
+            os.path.join(cfg.DATA_DIR, 'EdgeBoxes70_' + self.name + '.mat'))
         assert os.path.exists(filename), \
             'Edge boxes data not found at: {}'.format(filename)
         raw_data = sio.loadmat(filename)['bbs'].ravel()
@@ -440,7 +557,8 @@ class pascal_voc(imdb):
             score_list.append(scores)
 
             assert boxes.shape[0] == scores.shape[
-                0], 'box num({}) should equal score num({})'.format(boxes.shape, scores.shape)
+                0], 'box num({}) should equal score num({})'.format(
+                    boxes.shape, scores.shape)
 
             total_roi += boxes.shape[0]
             if boxes.shape[0] > 1024:
@@ -460,9 +578,8 @@ class pascal_voc(imdb):
         return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def _load_edge_boxes_roidb_despreate(self):
-        filename = os.path.abspath(os.path.join(cfg.DATA_DIR,
-                                                'edge_boxes_data',
-                                                self.name + '.mat'))
+        filename = os.path.abspath(
+            os.path.join(cfg.DATA_DIR, 'edge_boxes_data', self.name + '.mat'))
         assert os.path.exists(filename), \
             'Edge boxes data not found at: {}'.format(filename)
         raw_data = sio.loadmat(filename)['boxes'].ravel()
@@ -471,6 +588,10 @@ class pascal_voc(imdb):
         box_list = []
         score_list = []
         total_roi = 0
+        up_1024 = 0
+        up_2048 = 0
+        up_3072 = 0
+        up_4096 = 0
         for i in xrange(raw_data.shape[0]):
             # boxes in eb are in the form [y1 x1 y2 x2]
             boxes = raw_data[i][:, (1, 0, 3, 2)] - 1
@@ -488,6 +609,21 @@ class pascal_voc(imdb):
             box_list.append(boxes)
             score_list.append(scores)
 
+            if boxes.shape[0] > 1024:
+                up_1024 += 1
+            if boxes.shape[0] > 2048:
+                up_2048 += 1
+            if boxes.shape[0] > 3072:
+                up_3072 += 1
+            if boxes.shape[0] > 4096:
+                up_4096 += 1
+
+        print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
+        print 'up_1024: ', up_1024
+        print 'up_2048: ', up_2048
+        print 'up_3072: ', up_3072
+        print 'up_4096: ', up_4096
+
         print 'total_roi: ', total_roi, ' ave roi: ', total_roi / i
         return self.create_roidb_from_box_list(box_list, None, score_list)
 
@@ -504,37 +640,169 @@ class pascal_voc(imdb):
         # print '{} mcg roidb loaded from {}'.format(self.name, cache_file)
         # return roidb
 
-        if cfg.WSL and not cfg.USE_PSEUDO:
+        if cfg.WSL:
+            assert ('USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO)
             # WSL train and test
             roidb = self._load_mcg_roidb(None)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'trainval' in self.name:
-            # WSL fast rcnn train
-            pseudo_gt_roidb = self.pseudo_gt_roidb()
-            mcg_roidb = self._load_mcg_roidb(pseudo_gt_roidb)
-            roidb = imdb.merge_roidbs(pseudo_gt_roidb, mcg_roidb)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
-            # WSL fast rcnn test
-            roidb = self._load_mcg_roidb(None)
-        elif not cfg.WSL and not cfg.USE_PSEUDO:
-            # Fast rcnn train and test
-            if (int(self._year) == 2007 or self._image_set != 'test'):
-                gt_roidb = self.gt_roidb()
-                mcg_roidb = self._load_mcg_roidb(gt_roidb)
-                roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
-            else:
-                roidb = self._load_mcg_roidb(None)
         else:
-            raise Exception('Not implement mode.')
+            if 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+                # WSL fast rcnn train
+                pseudo_gt_roidb = self.pseudo_gt_roidb()
+                mcg_roidb = self._load_mcg_roidb(pseudo_gt_roidb)
+                roidb = imdb.merge_roidbs(pseudo_gt_roidb, mcg_roidb)
+            elif 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'test' in self.name:
+                # WSL fast rcnn test
+                roidb = self._load_mcg_roidb(None)
+            elif 'USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO:
+                # Fast rcnn train and test
+                if (int(self._year) == 2007 or self._image_set != 'test'):
+                    gt_roidb = self.gt_roidb()
+                    mcg_roidb = self._load_mcg_roidb(gt_roidb)
+                    roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
+                else:
+                    roidb = self._load_mcg_roidb(None)
+            else:
+                raise Exception('Not implement mode.')
 
         if cfg.GENERATE_ROI:
             gt_roidb = self.gt_roidb()
             roidb = self._general_roidb(gt_roidb)
 
         # with open(cache_file, 'wb') as fid:
-            # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         # print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
+
+    def _feedback_roidb(self, gt_roidb):
+        result_dir = cfg.FEEDBACK_DIR
+
+        all_dets = dict()
+        for dirpath, dirnames, filenames in os.walk(result_dir):
+            print dirpath, dirnames, filenames
+            for filename in filenames:
+                result_path = os.path.join(dirpath, filename)
+                print 'Loading thing from ', result_path
+
+                with open(result_path, 'r') as f:
+                    for line in f.readlines():
+                        line = line.strip()
+                        im_id, score, xmin, ymin, xmax, ymax = line.split(' ')
+
+                        if not all_dets.has_key(im_id):
+                            all_dets[im_id] = []
+                        # all_dets[im_id].append([score, xmin, ymin, xmax, ymax])
+                        all_dets[im_id].append(
+                            [score, xmin, ymin, xmax, ymax, filename])
+
+        box_list = []
+        score_list = []
+        total_roi = 0
+        up_64 = 0
+        up_128 = 0
+        up_256 = 0
+        up_512 = 0
+
+        for im_i, ix in enumerate(self._image_index):
+            if im_i % 1000 == 0:
+                print '{:d} / {:d}'.format(im_i + 1, self.num_images)
+
+            img_size = PIL.Image.open(self.image_path_at(im_i)).size
+
+            gt_cls = self._gt_classes[ix]
+            gt_cls_name = [
+                self._classes[i_c] for i_c in range(len(self._classes))
+                if gt_cls[i_c] == 1
+            ]
+
+            boxes = []
+            scores = []
+            scores_ = []
+            dets = all_dets[ix]
+            for det in dets:
+                # score, xmin, ymin, xmax, ymax = det[:]
+                score, xmin, ymin, xmax, ymax, filename = det[:]
+
+                # TODO(YH): should we keep all
+                # is_keep = False
+                # for cls in gt_cls_name:
+                # if cls in filename:
+                # is_keep = True
+                # if not is_keep:
+                # continue
+
+                xmin = max(0, int(xmin) - 1)
+                ymin = max(0, int(ymin) - 1)
+                xmax = min(img_size[0] - 1, int(xmax) - 1)
+                ymax = min(img_size[1] - 1, int(ymax) - 1)
+
+                # TODO(YH): should we minus one ?
+                box = [xmin, ymin, xmax, ymax]
+                boxes.append(box)
+                scores.append([score])
+                scores_.append([0.0])
+
+                assert xmin >= 0, xmin
+                assert ymin >= 0, ymin
+                assert xmax >= xmin, '{} vs {}'.format(xmax, xmin)
+                assert ymax >= ymin, '{} vs {}'.format(ymax, ymin)
+                assert xmax < img_size[0], '{} vs {}'.format(xmax, img_size[0])
+                assert ymax < img_size[1], '{} vs {}'.format(ymax, img_size[1])
+
+            boxes = np.array(boxes, dtype=np.uint16)
+            scores = np.array(scores, dtype=np.float32)
+            scores_ = np.array(scores_, dtype=np.float32)
+
+            assert (boxes[:, 0] >= 0).all()
+            assert (boxes[:, 1] >= 0).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 3] >= boxes[:, 1]).all()
+            assert (boxes[:, 2] < img_size[0]).all()
+            assert (boxes[:, 3] < img_size[1]).all()
+
+            # keep = ds_utils.unique_boxes(boxes)
+            # boxes = boxes[keep, :]
+            # scores = scores[keep]
+
+            # keep = ds_utils.filter_small_boxes(boxes, self.config['min_size'])
+            # boxes = boxes[keep, :]
+            # scores = scores[keep]
+
+            # sort by confidence
+            sorted_ind = np.argsort(-scores.flatten())
+            boxes = boxes[sorted_ind, :]
+            scores = scores[sorted_ind, :]
+            scores_ = scores_[sorted_ind, :]
+
+            num_roi_this = min(boxes.shape[0], cfg.FEEDBACK_NUM)
+            boxes = boxes[:num_roi_this]
+            scores = scores[:num_roi_this]
+            scores_ = scores_[:num_roi_this]
+
+            assert boxes.shape[0] == scores.shape[
+                0], 'box num({}) should equal score num({})'.format(
+                    boxes.shape, scores.shape)
+
+            total_roi += boxes.shape[0]
+            if boxes.shape[0] > 64:
+                up_64 += 1
+            if boxes.shape[0] > 128:
+                up_128 += 1
+            if boxes.shape[0] > 256:
+                up_256 += 1
+            if boxes.shape[0] > 512:
+                up_512 += 1
+
+            box_list.append(boxes)
+            score_list.append(scores)
+
+        print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
+        print 'up_64: ', up_64
+        print 'up_128: ', up_128
+        print 'up_256: ', up_256
+        print 'up_512: ', up_512
+        return box_list, score_list
+        return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def _general_roidb(self, gt_roidb):
         roidb = []
@@ -602,13 +870,14 @@ class pascal_voc(imdb):
             gt_classes[ix] = 0
             seg_areas[ix] = (x2 - x1 + 1) * (y2 - y1 + 1)
 
-            roidb.append({'boxes': boxes,
-                          'box_scores': box_scores,
-                          'gt_classes': gt_classes,
-                          'gt_overlaps': overlaps,
-                          'flipped': False,
-                          'seg_areas': seg_areas}
-                         )
+            roidb.append({
+                'boxes': boxes,
+                'box_scores': box_scores,
+                'gt_classes': gt_classes,
+                'gt_overlaps': overlaps,
+                'flipped': False,
+                'seg_areas': seg_areas
+            })
         return roidb
 
     def _load_mcg_roidb(self, gt_roidb):
@@ -620,21 +889,36 @@ class pascal_voc(imdb):
         up_3072 = 0
         up_4096 = 0
 
+        if cfg.USE_FEEDBACK:
+            box_fb_list, score_fb_list = self._feedback_roidb(gt_roidb)
+
         for i, index in enumerate(self._image_index):
             if i % 1000 == 0:
                 print '{:d} / {:d}'.format(i + 1, len(self._image_index))
 
+            img_size = PIL.Image.open(self.image_path_at(i)).size
+
             box_file = os.path.join(
-                cfg.DATA_DIR, 'MCG-Pascal-Main_trainvaltest_{}-boxes'.format(self._year), '{}.mat'.format(index))
+                cfg.DATA_DIR,
+                'MCG-Pascal-Main_trainvaltest_{}-boxes'.format(self._year),
+                '{}.mat'.format(index))
 
             raw_data = sio.loadmat(box_file)['boxes']
             score_data = sio.loadmat(box_file)['scores']
 
-            boxes = np.maximum(raw_data - 1, 0).astype(np.uint16)
+            # boxes = np.maximum(raw_data - 1, 0).astype(np.uint16)
+            boxes = raw_data.astype(np.uint16) - 1
             scores = score_data.astype(np.float)
 
             # Boxes from the MCG website are in (y1, x1, y2, x2) order
             boxes = boxes[:, (1, 0, 3, 2)]
+
+            assert (boxes[:, 0] >= 0).all()
+            assert (boxes[:, 1] >= 0).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 3] >= boxes[:, 1]).all()
+            assert (boxes[:, 2] < img_size[0]).all()
+            assert (boxes[:, 3] < img_size[1]).all()
 
             keep = ds_utils.unique_boxes(boxes)
             boxes = boxes[keep, :]
@@ -650,7 +934,17 @@ class pascal_voc(imdb):
             boxes = boxes[sorted_ind, :]
 
             assert boxes.shape[0] == scores.shape[
-                0], 'box num({}) should equal score num({})'.format(boxes.shape, scores.shape)
+                0], 'box num({}) should equal score num({})'.format(
+                    boxes.shape, scores.shape)
+
+            if cfg.USE_FEEDBACK:
+                insert_p = min(cfg.TRAIN.ROIS_PER_IM, boxes.shape[0])
+                boxes_h = boxes[:insert_p]
+                boxes_t = boxes[insert_p:]
+                scores_h = scores[:insert_p]
+                scores_t = scores[insert_p:]
+                boxes = np.vstack((boxes_h, box_fb_list[i], boxes_t))
+                scores = np.vstack((scores_h, score_fb_list[i], scores_t))
 
             total_roi += boxes.shape[0]
             if boxes.shape[0] > 1024:
@@ -664,6 +958,9 @@ class pascal_voc(imdb):
 
             box_list.append(boxes)
             score_list.append(scores)
+
+        if cfg.USE_FEEDBACK:
+            cfg.TRAIN.ROIS_PER_IM += cfg.FEEDBACK_NUM
 
         print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
         print 'up_1024: ', up_1024
@@ -692,9 +989,9 @@ class pascal_voc(imdb):
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
     def _load_selective_search_roidb(self, gt_roidb):
-        filename = os.path.abspath(os.path.join(cfg.DATA_DIR,
-                                                'selective_search_data',
-                                                self.name + '.mat'))
+        filename = os.path.abspath(
+            os.path.join(cfg.DATA_DIR, 'selective_search_data', self.name +
+                         '.mat'))
         assert os.path.exists(filename), \
             'Selective search data not found at: {}'.format(filename)
         raw_data = sio.loadmat(filename)['boxes'].ravel()
@@ -743,7 +1040,8 @@ class pascal_voc(imdb):
         if not self.config['use_diff']:
             # Exclude the samples labeled as difficult
             non_diff_objs = [
-                obj for obj in objs if int(obj.find('difficult').text) == 0]
+                obj for obj in objs if int(obj.find('difficult').text) == 0
+            ]
             # if len(non_diff_objs) != len(objs):
             #     print 'Removed {} difficult objects'.format(
             #         len(objs) - len(non_diff_objs))
@@ -771,7 +1069,8 @@ class pascal_voc(imdb):
         if not self.config['use_diff']:
             # Exclude the samples labeled as difficult
             non_diff_objs = [
-                obj for obj in objs if int(obj.find('difficult').text) == 0]
+                obj for obj in objs if int(obj.find('difficult').text) == 0
+            ]
             # if len(non_diff_objs) != len(objs):
             #     print 'Removed {} difficult objects'.format(
             #         len(objs) - len(non_diff_objs))
@@ -802,48 +1101,42 @@ class pascal_voc(imdb):
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
 
-        return {'boxes': boxes,
-                'box_scores': box_scores,
-                'gt_classes': gt_classes,
-                'gt_overlaps': overlaps,
-                'flipped': False,
-                'seg_areas': seg_areas}
+        return {
+            'boxes': boxes,
+            'box_scores': box_scores,
+            'gt_classes': gt_classes,
+            'gt_overlaps': overlaps,
+            'flipped': False,
+            'seg_areas': seg_areas
+        }
 
     def _get_comp_id(self):
-        comp_id = (self._comp_id + '_' + self._salt if self.config['use_salt']
-                   else self._comp_id)
+        comp_id = (self._comp_id + '_' + self._salt
+                   if self.config['use_salt'] else self._comp_id)
         return comp_id
 
     def set_salt(self, salt):
         self._salt = salt
 
     def _get_comp_id_cls(self):
-        comp_id = (self._comp_id_cls + '_' + self._salt if self.config['use_salt']
-                   else self._comp_id_cls)
+        comp_id = (self._comp_id_cls + '_' + self._salt
+                   if self.config['use_salt'] else self._comp_id_cls)
         return comp_id
 
     def _get_voc_results_file_template(self):
         # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
         filename = self._get_comp_id() + '_det_' + \
             self._image_set + '_{:s}.txt'
-        path = os.path.join(
-            self._devkit_path,
-            'results',
-            'VOC' + self._year,
-            'Main',
-            filename)
+        path = os.path.join(self._devkit_path, 'results', 'VOC' + self._year,
+                            'Main', filename)
         return path
 
     def _get_voc_results_file_template_cls(self):
         # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
         filename = self._get_comp_id_cls() + '_cls_' + \
             self._image_set + '_{:s}.txt'
-        path = os.path.join(
-            self._devkit_path,
-            'results',
-            'VOC' + self._year,
-            'Main',
-            filename)
+        path = os.path.join(self._devkit_path, 'results', 'VOC' + self._year,
+                            'Main', filename)
         return path
 
     def _write_voc_results_file_cls(self, all_scores):
@@ -853,15 +1146,15 @@ class pascal_voc(imdb):
             if cls == '__background__':
                 continue
             filename = self._get_voc_results_file_template_cls().format(cls)
-            print 'Writing {} VOC results file \t{}'.format(cls, os.path.relpath(filename))
+            print 'Writing {} VOC results file \t{}'.format(
+                cls, os.path.relpath(filename))
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_index):
                     score = all_scores[cls_ind][im_ind]
                     if score == []:
                         continue
                     # the VOCdevkit expects 1-based indices
-                    f.write('{:s} {:.8f}\n'.
-                            format(index, score))
+                    f.write('{:s} {:.8f}\n'.format(index, score))
 
     def _write_voc_results_file(self, all_boxes):
         if all_boxes is None:
@@ -870,7 +1163,8 @@ class pascal_voc(imdb):
             if cls == '__background__':
                 continue
             filename = self._get_voc_results_file_template().format(cls)
-            print 'Writing {} VOC results file \t{}'.format(cls, os.path.relpath(filename))
+            print 'Writing {} VOC results file \t{}'.format(
+                cls, os.path.relpath(filename))
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_index):
                     dets = all_boxes[cls_ind][im_ind]
@@ -878,23 +1172,17 @@ class pascal_voc(imdb):
                         continue
                     # the VOCdevkit expects 1-based indices
                     for k in xrange(dets.shape[0]):
-                        f.write('{:s} {:.8f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
-                                format(index, dets[k, -1],
-                                       dets[k, 0] + 1, dets[k, 1] + 1,
-                                       dets[k, 2] + 1, dets[k, 3] + 1))
+                        f.write(
+                            '{:s} {:.8f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(
+                                index, dets[k, -1], dets[k, 0] + 1, dets[k, 1]
+                                + 1, dets[k, 2] + 1, dets[k, 3] + 1))
 
     def _do_python_eval(self, output_dir='output'):
-        annopath = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
-            'Annotations',
-            '{:s}.xml')
-        imagesetfile = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
-            'ImageSets',
-            'Main',
-            self._image_set + '.txt')
+        annopath = os.path.join(self._devkit_path, 'VOC' + self._year,
+                                'Annotations', '{:s}.xml')
+        imagesetfile = os.path.join(self._devkit_path, 'VOC' + self._year,
+                                    'ImageSets', 'Main',
+                                    self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         aps = []
         # The PASCAL VOC metric changed in 2010
@@ -907,7 +1195,13 @@ class pascal_voc(imdb):
                 continue
             filename = self._get_voc_results_file_template().format(cls)
             rec, prec, ap = voc_eval(
-                filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5, use_07_metric=use_07_metric)
+                filename,
+                annopath,
+                imagesetfile,
+                cls,
+                cachedir,
+                ovthresh=0.5,
+                use_07_metric=use_07_metric)
             aps += [ap]
             print('AP for {} = {:.4f} \tfilename: {}'.format(
                 cls, ap, os.path.relpath(filename)))
@@ -936,17 +1230,11 @@ class pascal_voc(imdb):
         cfg.TEST.MAP = np.mean(aps)
 
     def _do_python_eval_corloc(self, output_dir='output'):
-        annopath = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
-            'Annotations',
-            '{:s}.xml')
-        imagesetfile = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
-            'ImageSets',
-            'Main',
-            self._image_set + '.txt')
+        annopath = os.path.join(self._devkit_path, 'VOC' + self._year,
+                                'Annotations', '{:s}.xml')
+        imagesetfile = os.path.join(self._devkit_path, 'VOC' + self._year,
+                                    'ImageSets', 'Main',
+                                    self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         corlocs = []
         # The PASCAL VOC metric changed in 2010
@@ -959,7 +1247,13 @@ class pascal_voc(imdb):
                 continue
             filename = self._get_voc_results_file_template().format(cls)
             corloc = voc_eval_corloc(
-                filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5, use_07_metric=use_07_metric)
+                filename,
+                annopath,
+                imagesetfile,
+                cls,
+                cachedir,
+                ovthresh=0.5,
+                use_07_metric=use_07_metric)
             corlocs += [corloc]
             print('corloc for {} = {:.4f} \tfilename: {}'.format(
                 cls, corloc, os.path.relpath(filename)))
@@ -1030,17 +1324,11 @@ class pascal_voc(imdb):
             self.config['cleanup'] = True
 
     def visualization_detection(self, output_dir='vis'):
-        annopath = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
-            'Annotations',
-            '{:s}.xml')
-        imagesetfile = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
-            'ImageSets',
-            'Main',
-            self._image_set + '.txt')
+        annopath = os.path.join(self._devkit_path, 'VOC' + self._year,
+                                'Annotations', '{:s}.xml')
+        imagesetfile = os.path.join(self._devkit_path, 'VOC' + self._year,
+                                    'ImageSets', 'Main',
+                                    self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         image_path = os.path.join(self._data_path, 'JPEGImages',
                                   '{}' + self._image_ext)
@@ -1054,8 +1342,8 @@ class pascal_voc(imdb):
             if not os.path.isdir(output_sub_dir):
                 os.mkdir(output_sub_dir)
             filename = self._get_voc_results_file_template().format(cls)
-            voc_eval_visualization(
-                filename, annopath, imagesetfile, cls, cachedir, image_path, output_sub_dir)
+            voc_eval_visualization(filename, annopath, imagesetfile, cls,
+                                   cachedir, image_path, output_sub_dir)
 
 
 if __name__ == '__main__':

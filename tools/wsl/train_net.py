@@ -112,6 +112,8 @@ if __name__ == '__main__':
     imdb, roidb = combined_roidb(args.imdb_name)
     print '{:d} roidb entries'.format(len(roidb))
 
+    cfg.TRAIN.GAN_imdb_name=args.imdb_name
+
     output_dir = get_output_dir(imdb)
     print 'Output will be saved to `{:s}`'.format(output_dir)
     if cfg.OPG_DEBUG:

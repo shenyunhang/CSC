@@ -37,7 +37,14 @@ case $DATASET in
 		;;
 	pascal_voc10)
 		TRAIN_IMDB="voc_2010_trainval"
-		TEST_IMDB="voc_2010_test"
+		TEST_IMDB="voc_2007_test"
+		PT_DIR="pascal_voc"
+		ITERS=20
+		ITERS2=10
+		;;
+	pascal_voc12)
+		TRAIN_IMDB="voc_2012_trainval"
+		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
 		ITERS=20
 		ITERS2=10
@@ -53,6 +60,7 @@ case $DATASET in
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
+		ITERS=280000
 		;;
 	*)
 		echo "No dataset given"

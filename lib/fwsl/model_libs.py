@@ -8,7 +8,6 @@ from caffe.proto import caffe_pb2
 
 def RoIPoolingLayer(net, feature_name, roi_name, out_name, pooled_h, pooled_w,
                     spatial_scale):
-
     net[out_name] = L.ROIPooling(
         net[feature_name],
         net[roi_name],
@@ -16,13 +15,11 @@ def RoIPoolingLayer(net, feature_name, roi_name, out_name, pooled_h, pooled_w,
         pooled_w=pooled_w,
         spatial_scale=spatial_scale)
 
-def ya_RoIPoolingLayer(net, feature_name, roi_name, out_name, pooled_h, pooled_w):
 
+def ya_RoIPoolingLayer(net, feature_name, roi_name, out_name, pooled_h,
+                       pooled_w):
     net[out_name] = L.YAROIPooling(
-        net[feature_name],
-        net[roi_name],
-        pooled_h=pooled_h,
-        pooled_w=pooled_w)
+        net[feature_name], net[roi_name], pooled_h=pooled_h, pooled_w=pooled_w)
 
 
 def FcReluDropLayer(net,
@@ -51,7 +48,9 @@ def FcReluDropLayer(net,
                 dict(lr_mult=2 * lr_mult, decay_mult=0)
             ],
         }
+
     net[fc_name] = L.InnerProduct(net[bottom], num_output=num_output, **kwargs)
+
     if len(relu_name) > 0:
         net[relu_name] = L.ReLU(net[fc_name], in_place=True)
         if len(drop_name) > 0:

@@ -22,7 +22,8 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
 
     # Add additional convolutional layers.
     # 19 x 19
-    from_layer = net.keys()[-1]
+    # from_layer = net.keys()[-1]
+    from_layer = 'fc7'
 
     # TODO(weiliu89): Construct the name using the last layer to avoid duplication.
     # 10 x 10
@@ -143,7 +144,25 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
     return net
 
 
-def AddExtraLayers_cpg(net, lr_mult=1):
+def AddExtraLayers_concat(net):
+    from_layers = [net['rois_o'], net['rois_f']]
+    net['rois'] = L.Concat(*from_layers, axis=0)
+
+    from_layers = [net['rois_normalized_o'], net['rois_normalized_f']]
+    net['rois_normalized'] = L.Concat(*from_layers, axis=0)
+
+    from_layers = [net['roi_scores_o'], net['roi_scores_f']]
+    net['roi_scores'] = L.Concat(*from_layers, axis=0)
+
+    from_layers = [net['roi_num_o'], net['roi_num_f']]
+    net['roi_num'] = L.Eltwise(
+        *from_layers,
+        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('SUM'))
+
+    return net
+
+
+def AddExtraLayers_cpg(net, lr_mult=1, is_test=False):
     use_relu = True
 
     kwargs = {
@@ -164,7 +183,7 @@ def AddExtraLayers_cpg(net, lr_mult=1):
     }
 
     cpg_train_param = {
-        'is_cpg': True,
+        'is_cpg': False,
         'mode': caffe_pb2.CPGParameter.Mode.Value('CPG_POOLING'),
         'is_order': False,
         'is_contrast': False,
@@ -184,52 +203,50 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         'max_num_im_cpg': 2 * 5011 * 20,
     }
 
-    cross_entropy_loss_param = {
-        'display': 1280,
-    }
-    loss_param = {
-        # 'normalization': normalization_mode,
-    }
-
-    tmp_net = {}
-    for i in range(5):
-        from_layer = net.keys()[-1]
-        tmp_net[from_layer] = net[from_layer]
-        del net[from_layer]
-
-    # Add additional convolutional layers.
-    # 19 x 19
-    # from_layer = net.keys()[-1]
     from_layer = 'conv5_3'
 
     out_layer = 'roi_pool_conv5'
-    RoIPoolingLayer(net, from_layer, 'roi', out_layer, 7, 7, 0.0625)
+    RoIPoolingLayer(net, from_layer, 'rois', out_layer, 7, 7, 0.0625)
 
     from_layer = out_layer
     out_layer = 'boost'
-    net[out_layer] = L.Scale(net[from_layer], net['roi_score'], axis=0)
+    net[out_layer] = L.Scale(net[from_layer], net['roi_scores'], axis=0)
 
-    from_layer = out_layer
-    out_layer = 'fc6_wsl'
-    FcReluDropLayer(
-        net,
-        from_layer,
-        out_layer,
-        'relu6_wsl',
-        'drop6_wsl',
-        4096,
-        lr_mult=lr_mult)
+    if True:
+        from_layer = out_layer
+        out_layer = 'fc6_wsl'
+        FcReluDropLayer(
+            net,
+            from_layer,
+            out_layer,
+            'relu6_wsl',
+            'drop6_wsl',
+            4096,
+            lr_mult=lr_mult)
 
-    from_layer = out_layer
-    out_layer = 'fc7_wsl'
-    FcReluDropLayer(
-        net,
-        from_layer,
-        out_layer,
-        'relu7_wsl',
-        'drop7_wsl',
-        4096,
-        lr_mult=lr_mult)
+        from_layer = out_layer
+        out_layer = 'fc7_wsl'
+        FcReluDropLayer(
+            net,
+            from_layer,
+            out_layer,
+            'relu7_wsl',
+            'drop7_wsl',
+            4096,
+            lr_mult=lr_mult)
+
+        from_layer = 'fc7_wsl'
+        out_layers = ['fc8c_wsl', 'fc8d_wsl']
+        for out_layer in out_layers:
+            FcReluDropLayer(
+                net,
+                from_layer,
+                out_layer,
+                '',
+                '',
+                20,
+                lr_mult=lr_mult,
+                has_filler=True)
 
     if False:
         from_layer = out_layer
@@ -258,18 +275,16 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         net['drop7_wsl'] = L.Dropout(
             net[out_layer], in_place=True, dropout_ratio=0.5)
 
-    from_layer = 'fc7_wsl'
-    out_layers = ['fc8c', 'fc8d']
-    for out_layer in out_layers:
-        FcReluDropLayer(
-            net,
-            from_layer,
-            out_layer,
-            '',
-            '',
-            20,
-            lr_mult=lr_mult,
-            has_filler=True)
+        from_layer = 'fc7_wsl'
+        out_layers = ['fc8c_wsl', 'fc8d_wsl']
+        for out_layer in out_layers:
+            net[out_layer] = L.Convolution(
+                net[from_layer],
+                num_output=20,
+                kernel_size=1,
+                pad=0,
+                stride=1,
+                **kwargs_new)
 
     from_layers = out_layers
     out_layers = ['alpha_cls', 'alpha_det']
@@ -293,11 +308,42 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         pool=caffe_pb2.RoIScorePoolingParameter.PoolMethod.Value('SUM'),
         axis=0)
 
-    from_layers = [
-        net['label'], net['cls_score'], net['roi'], net['bbox_score']
-    ]
-    net['cpg_roi_select'], net['label_pos'], net['label_neg'] = L.MIL(
-        *from_layers, cpg_param=cpg_train_param, ntop=3)
+    if is_test:
+        from_layers = [
+            net['cls_score'], net['cls_score'], net['rois'], net['bbox_score']
+        ]
+        net['cpg_roi_select'] = L.MIL(
+            *from_layers, cpg_param=cpg_train_param, ntop=1)
+    else:
+        from_layers = [
+            net['label'], net['cls_score'], net['rois'], net['bbox_score']
+        ]
+        net['cpg_roi_select'], net['label_pos'], net['label_neg'] = L.MIL(
+            *from_layers, cpg_param=cpg_train_param, ntop=3)
+
+    from_layers = [net['bbox_score'], net['cpg_roi_select']]
+    net['bbox_prob'] = L.Eltwise(
+        *from_layers,
+        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
+
+    return net
+
+
+def AddExtraLayers_cpg_loss(net):
+    cross_entropy_loss_param = {
+        'display': 1280,
+    }
+    loss_param = {
+        # 'normalization': normalization_mode,
+    }
+
+    # net['roi_cls_softmax'] = L.Softmax(net['roi_cls'], axis=1)
+
+    # from_layers = [net['score_pos'], net['roi_cls_softmax']]
+    # from_layers = [net['score_pos'], net['roi_cls']]
+    # net['score_pos_final'] = L.Eltwise(
+    # *from_layers,
+    # operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
 
     from_layers = [net['bbox_score'], net['cpg_roi_select']]
     net['score_pos'] = L.PolarConstraint(
@@ -343,19 +389,6 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         *from_layers,
         ntop=0,
         propagate_down=[False, False, False, False, False])
-
-    from_layers = [net['bbox_score'], net['cpg_roi_select']]
-    net['bbox_score_final'] = L.Eltwise(
-        *from_layers,
-        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
-
-    from_layers = [
-        net['bbox_score_final'], net['roi_normalized'], net['label']
-    ]
-    net['pseudo_label'] = L.PseudoLabel(*from_layers)
-
-    for key in tmp_net.keys():
-        net[key] = tmp_net[key]
 
     return net
 
@@ -534,7 +567,8 @@ else:
 # job_name = "SSD_{}".format(resize)
 job_name = sys.argv[1]
 # The name of the model. Modify it if you want.
-model_name = "VGG_VOC2007_{}".format(job_name)
+# model_name = "VGG_VOC2007_{}".format(job_name)
+model_name = "VGG_VOC2007"
 
 # Directory which stores the model .prototxt file.
 save_dir = "output/{}".format(job_name)
@@ -682,7 +716,7 @@ solver_param = {
     'momentum': 0.9,
     'iter_size': iter_size,
     'max_iter': 120000,
-    'snapshot': 10000,
+    'snapshot': 500,
     'display': 10,
     'average_loss': 10,
     # 'type': "SGD",
@@ -692,10 +726,11 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 10000,
+    'test_interval': 500,
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,
+    'show_per_class_result': True,
 }
 
 # parameters for generating detection output.
@@ -705,7 +740,7 @@ det_out_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 400
+        'top_k': 1024
     },
     'save_output_param': {
         'output_directory': output_result_dir,
@@ -715,7 +750,35 @@ det_out_param = {
         'name_size_file': name_size_file,
         'num_test_image': num_test_image,
     },
-    'keep_top_k': 200,
+    'keep_top_k': 1024,
+    'confidence_threshold': 0.01,
+    'code_type': code_type,
+}
+
+# parameters for generating detection output.
+det_out_test_param = {
+    'num_classes': num_classes,
+    'share_location': share_location,
+    'background_label_id': background_label_id,
+    'nms_param': {
+        'nms_threshold': 0.45,
+        'top_k': 1
+    },
+    'keep_top_k': 1,
+    'confidence_threshold': 0.01,
+    'code_type': code_type,
+}
+
+# parameters for generating detection output.
+det_out_train_param = {
+    'num_classes': num_classes,
+    'share_location': share_location,
+    'background_label_id': background_label_id,
+    'nms_param': {
+        'nms_threshold': 0.45,
+        'top_k': 512
+    },
+    'keep_top_k': 512,
     'confidence_threshold': 0.01,
     'code_type': code_type,
 }
@@ -729,6 +792,12 @@ det_eval_param = {
     'name_size_file': name_size_file,
 }
 
+freeze_layers = [
+    'conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1', 'conv3_2',
+    'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3', 'conv5_1', 'conv5_2',
+    'conv5_3', 'fc6', 'fc7', 'fc8'
+]
+
 ### Hopefully you don't need to change the following ###
 # Check file.
 check_if_exist(train_data)
@@ -741,25 +810,29 @@ make_if_not_exist(snapshot_dir)
 
 # Create train net.
 net = caffe.NetSpec()
-#net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size_per_device,
-#        train=True, output_label=True, label_map_file=label_map_file,
-#        transform_param=train_transform_param, batch_sampler=batch_sampler)
-net.data, net.roi, net.roi_normalized, net.roi_score, net.roi_num, net.label = L.Python(
+# net.data, net.label = CreateAnnotatedDataLayer(
+# train_data,
+# batch_size=batch_size_per_device,
+# train=True,
+# output_label=True,
+# label_map_file=label_map_file,
+# transform_param=train_transform_param,
+# batch_sampler=batch_sampler)
+net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, net.label = L.Python(
     ntop=6,
     module='wsl_roi_anno_data_layer.layer',
     layer='RoIDataLayer',
     param_str="'num_classes': 20")
 
-ya_VGGNetBody(
+VGGNetBody(
     net,
     from_layer='data',
     fully_conv=True,
     reduced=True,
     dilated=True,
     dropout=False,
-    freeze_all_layers=True)
+    freeze_layers=freeze_layers)
 
-AddExtraLayers_cpg(net, lr_mult=lr_mult)
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
 mbox_layers = CreateMultiBoxHead(
@@ -780,6 +853,43 @@ mbox_layers = CreateMultiBoxHead(
     kernel_size=3,
     pad=1,
     lr_mult=lr_mult)
+
+mbox_layers_out = list(mbox_layers)
+conf_name = "mbox_conf"
+if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
+    reshape_name = "{}_reshape".format(conf_name)
+    net[reshape_name] = L.Reshape(
+        net[conf_name], shape=dict(dim=[0, -1, num_classes]))
+    softmax_name = "{}_softmax".format(conf_name)
+    net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
+    flatten_name = "{}_flatten".format(conf_name)
+    net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
+    mbox_layers_out[1] = net[flatten_name]
+elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
+    sigmoid_name = "{}_sigmoid".format(conf_name)
+    net[sigmoid_name] = L.Sigmoid(net[conf_name])
+    mbox_layers_out[1] = net[sigmoid_name]
+
+net.detection_out = L.DetectionOutput(
+    *mbox_layers_out, detection_output_param=det_out_train_param)
+
+from_layers = [net['detection_out'], net['data']]
+net['rois_f'], net['rois_normalized_f'], net['roi_scores_f'], net[
+    'roi_num_f'] = L.Feedback(
+        *from_layers, name='feedback', ntop=4, propagate_down=[False, False])
+
+AddExtraLayers_concat(net)
+AddExtraLayers_cpg(net, lr_mult=lr_mult)
+AddExtraLayers_cpg_loss(net)
+
+from_layers = [
+    net['bbox_prob'],
+    net['rois_normalized'],
+    net['label'],
+    net['data'],
+]
+net['pseudo_label'] = L.PseudoLabel(
+    *from_layers, ntop=1, propagate_down=[False, False, False, False])
 
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"
@@ -812,7 +922,8 @@ VGGNetBody(
     fully_conv=True,
     reduced=True,
     dilated=True,
-    dropout=False)
+    dropout=False,
+    freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -854,6 +965,7 @@ net.detection_out = L.DetectionOutput(
     *mbox_layers,
     detection_output_param=det_out_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+
 net.detection_eval = L.DetectionEvaluate(
     net.detection_out,
     net.label,
@@ -866,6 +978,77 @@ with open(test_net_file, 'w') as f:
 shutil.copy(test_net_file, job_dir)
 
 # Create deploy net.
+net = caffe.NetSpec()
+net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, net.label = L.Python(
+    ntop=6,
+    module='wsl_roi_anno_data_layer.layer',
+    layer='RoIDataLayer',
+    param_str="'num_classes': 20")
+
+VGGNetBody(
+    net,
+    from_layer='data',
+    fully_conv=True,
+    reduced=True,
+    dilated=True,
+    dropout=False,
+    freeze_layers=freeze_layers)
+
+AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
+
+mbox_layers = CreateMultiBoxHead(
+    net,
+    data_layer='data',
+    from_layers=mbox_source_layers,
+    use_batchnorm=use_batchnorm,
+    min_sizes=min_sizes,
+    max_sizes=max_sizes,
+    aspect_ratios=aspect_ratios,
+    steps=steps,
+    normalizations=normalizations,
+    num_classes=num_classes,
+    share_location=share_location,
+    flip=flip,
+    clip=clip,
+    prior_variance=prior_variance,
+    kernel_size=3,
+    pad=1,
+    lr_mult=lr_mult)
+
+conf_name = "mbox_conf"
+if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
+    reshape_name = "{}_reshape".format(conf_name)
+    net[reshape_name] = L.Reshape(
+        net[conf_name], shape=dict(dim=[0, -1, num_classes]))
+    softmax_name = "{}_softmax".format(conf_name)
+    net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
+    flatten_name = "{}_flatten".format(conf_name)
+    net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
+    mbox_layers[1] = net[flatten_name]
+elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
+    sigmoid_name = "{}_sigmoid".format(conf_name)
+    net[sigmoid_name] = L.Sigmoid(net[conf_name])
+    mbox_layers[1] = net[sigmoid_name]
+
+net.detection_out = L.DetectionOutput(
+    *mbox_layers,
+    detection_output_param=det_out_test_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+
+from_layers = [net['detection_out'], net['data']]
+net['rois_f'], net['rois_normalized_f'], net['roi_scores_f'], net[
+    'roi_num_f'] = L.Feedback(
+        *from_layers, name='feedback', ntop=4, propagate_down=[False, False])
+
+AddExtraLayers_concat(net)
+AddExtraLayers_cpg(net, lr_mult=0, is_test=True)
+
+net.detection_eval = L.DetectionEvaluate(
+    net.detection_out,
+    net.label,
+    detection_evaluate_param=det_eval_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+
 # Remove the first and last layer from test net.
 deploy_net = net
 with open(deploy_net_file, 'w') as f:
@@ -877,6 +1060,18 @@ with open(deploy_net_file, 'w') as f:
     net_param.input.extend(['data'])
     net_param.input_shape.extend(
         [caffe_pb2.BlobShape(dim=[1, 3, resize_height, resize_width])])
+    net_param.input.extend(['rois_o'])
+    # net_param.input.extend(['rois'])
+    net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1, 5])])
+    net_param.input.extend(['rois_normalized_o'])
+    # net_param.input.extend(['rois_normalized'])
+    net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1, 5])])
+    net_param.input.extend(['roi_scores_o'])
+    # net_param.input.extend(['roi_scores'])
+    net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1])])
+    net_param.input.extend(['roi_num_o'])
+    # net_param.input.extend(['roi_num'])
+    net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1])])
     print(net_param, file=f)
 shutil.copy(deploy_net_file, job_dir)
 
