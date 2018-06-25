@@ -1,7 +1,6 @@
 name: "VGG_ILSVRC_16_layers"
 layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'roi_num' top: 'labels'
-	#top: 'opg_filter' top: 'opg_io'
-	python_param { module: 'roi_data_layer.layer_wsl' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
+	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"
@@ -115,3 +114,9 @@ layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "l
 
 #layer { name: "loss_feature" type: "SmoothFeatureLoss" bottom: "fc7" bottom: "rois" bottom: "bbox_score" bottom: "labels"
 #	top: "loss_feature" loss_weight: 0.001 smooth_feature_loss_param { debug_info: false }}
+
+#layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
+#	param { lr_mult: 0 decay_mult: 0 }
+#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 2 display: 1280 update: 128
+#	max_num_im_center: -1, center_filler { type: "gaussian" } ignore_label: 12}
+#	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }

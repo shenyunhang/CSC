@@ -79,9 +79,9 @@ layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7" dropout_param { d
 
 #-----------------------------------TWO STREAM----------------------------------------------------------------
 layer { name: "fc8c" type: "InnerProduct" bottom: "fc7" top: "fc8c" 
-	inner_product_param { num_output: 20 }}
+	inner_product_param { num_output: 80 }}
 layer { name: "fc8d" type: "InnerProduct" bottom: "fc7" top: "fc8d" 
-	inner_product_param { num_output: 20 }}
+	inner_product_param { num_output: 80 }}
 
 layer { name: "alpha_cls" type: "Softmax" bottom: "fc8c" top: "alpha_cls" softmax_param { axis: 1 }}
 layer { name: "alpha_det" type: "Softmax" bottom: "fc8d" top: "alpha_det" softmax_param { axis: 0 }}

@@ -89,7 +89,7 @@ if __name__ == '__main__':
     pprint.pprint(cfg)
 
     if not args.randomize:
-        # fix the random seeds (numpy and caffe) for reproducibility
+        print 'fixing the random seeds (numpy and caffe) for reproducibility'
         np.random.seed(cfg.RNG_SEED)
         caffe.set_random_seed(cfg.RNG_SEED)
 

@@ -10,3 +10,4 @@ faster_rcnn_models*
 *.mat
 *.caffemodel
 *.xml
+coco*

@@ -453,6 +453,7 @@ test_batch_size = 8
 # otherwise mAP will be slightly off the true value.
 test_iter = int(math.ceil(float(num_test_image) / test_batch_size))
 
+max_iters = int(sys.argv[4])
 solver_param = {
     # Train parameters
     'base_lr': base_lr,
@@ -462,8 +463,8 @@ solver_param = {
     'gamma': 0.1,
     'momentum': 0.9,
     'iter_size': iter_size,
-    'max_iter': 120000,
-    'snapshot': 10000,
+    'max_iter': max_iters,
+    'snapshot': 1000,
     'display': 10,
     'average_loss': 10,
     # 'type': "SGD",
@@ -473,7 +474,7 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 10000,
+    'test_interval': 1000,
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,

@@ -1,7 +1,7 @@
 name: "VGG_ILSVRC_16_layers"
 layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'roi_num' top: 'labels'
 	#top: 'cpg_filter' top: 'cpg_io'
-	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
+	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 80" }}
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"
@@ -96,11 +96,11 @@ layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7"
 #-----------------------------------TWO STREAM----------------------------------------------------------------
 layer { name: "fc8c" type: "InnerProduct" bottom: "fc7" top: "fc8c" 
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
-	inner_product_param { num_output: 20
+	inner_product_param { num_output: 80
 	weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 layer { name: "fc8d" type: "InnerProduct" bottom: "fc7" top: "fc8d" 
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
-	inner_product_param { num_output: 20
+	inner_product_param { num_output: 80
 	weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 
 layer { name: "alpha_cls" type: "Softmax" bottom: "fc8c" top: "alpha_cls" softmax_param { axis: 1 }}
@@ -126,7 +126,7 @@ layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "ro
 	top: "cpg_roi_select"
 	top: "labels_pos" top: "labels_neg"
 	cpg_param { is_cpg: false mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
-        max_num_im_cpg: -1 ignore_label: 12
+        max_num_im_cpg: -1 ignore_label: -1
 	cpg_blob_name: "data"
 	#cpg_blob_name: "conv1_2"
 	#cpg_blob_name: "conv2_2"
@@ -157,7 +157,7 @@ layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "lab
 #layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
 #	param { lr_mult: 0 decay_mult: 0 }
 #	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
-#	max_num_im_center: -1, center_filler { type: "gaussian" } ignore_label: 12 }
+#	max_num_im_center: -1, center_filler { type: "gaussian" } ignore_label: -1 }
 #	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
 
 #-----------------------------------STATISTICS----------------------------------------------------------------

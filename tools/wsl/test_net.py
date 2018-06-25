@@ -116,6 +116,10 @@ if __name__ == '__main__':
     imdb.competition_mode(args.comp_mode)
     imdb.set_proposal_method(cfg.TEST.PROPOSAL_METHOD)
 
+    # test_net_cache(
+        # net, imdb, max_per_image=args.max_per_image, vis=args.vis, scale=1.0)
+    # exit(0)
+
     if cfg.TEST.BBOX:
         test_net_bbox(
             net, imdb, max_per_image=args.max_per_image, vis=args.vis)

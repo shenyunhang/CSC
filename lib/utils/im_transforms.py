@@ -4,12 +4,12 @@ import math
 import numpy as np
 import numpy.random as npr
 import cv2
-from matplotlib.colors import rgb_to_hsv
-from matplotlib.colors import hsv_to_rgb
+# from matplotlib.colors import rgb_to_hsv
+# from matplotlib.colors import hsv_to_rgb
 from configure import cfg
 
 import utils.blob
-from caffe.io import resize_image
+# from caffe.io import resize_image
 
 
 def GenerateBatchSamples(roi, img_shape):
@@ -345,18 +345,18 @@ def convertTo(in_img, alpha, beta):
     return out_img
 
 
-def bgr_to_hsv(bgr):
-    b, g, r = cv2.split(bgr)
-    rgb = cv2.merge((r, g, b))
-    hsv = rgb_to_hsv(rgb)
-    return hsv
+# def bgr_to_hsv(bgr):
+    # b, g, r = cv2.split(bgr)
+    # rgb = cv2.merge((r, g, b))
+    # hsv = rgb_to_hsv(rgb)
+    # return hsv
 
 
-def hsv_to_bgr(hsv):
-    rgb = hsv_to_rgb(hsv)
-    r, g, b = cv2.split(rgb)
-    bgr = cv2.merge((b, g, r))
-    return bgr
+# def hsv_to_bgr(hsv):
+    # rgb = hsv_to_rgb(hsv)
+    # r, g, b = cv2.split(rgb)
+    # bgr = cv2.merge((b, g, r))
+    # return bgr
 
 
 def RandomBrightness(in_img, brightness_prob, brightness_delta):
@@ -544,8 +544,8 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
             print 'Unknow interp mode: ', interp_name
             exit(0)
 
-    if len(cfg.TRAIN.INTERP_MODEL) > 0:
-        interp_order = np.random.randint(0, 6)
+    # if len(cfg.TRAIN.INTERP_MODEL) > 0:
+    # interp_order = np.random.randint(0, 6)
 
     if cfg.RESIZE_MODE == 'WARP':
         im_scale_h = float(target_size) / float(im_shape[0])

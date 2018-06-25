@@ -155,7 +155,7 @@ YEAR = sys.argv[1]
 # The database file for training data. Created by data/VOC{}/create_data.sh
 train_data = "data/VOC{}/lmdb/VOC{}_trainval_lmdb".format(YEAR, YEAR)
 # The database file for testing data. Created by data/VOC{}/create_data.sh
-test_data = "data/VOC{}/lmdb/VOC{}_test_lmdb".format(YEAR,YEAR)
+test_data = "data/VOC{}/lmdb/VOC{}_test_lmdb".format(YEAR, YEAR)
 # Specify the batch sampler.
 resize_width = 300
 resize_height = 300

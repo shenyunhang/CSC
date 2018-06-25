@@ -16,6 +16,7 @@ import scipy.io as sio
 import cPickle
 import json
 import uuid
+import PIL
 # COCO API
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
@@ -59,6 +60,9 @@ class coco(imdb):
         self._COCO = COCO(self._get_ann_file())
         cats = self._COCO.loadCats(self._COCO.getCatIds())
         self._classes = tuple(['__background__'] + [c['name'] for c in cats])
+        if cfg.WSL:
+            # remove the _background_ class
+            self._classes = self._classes[1:]
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._class_to_coco_cat_id = dict(zip([c['name'] for c in cats],
                                               self._COCO.getCatIds()))
@@ -82,6 +86,11 @@ class coco(imdb):
         # do not have gt annotations)
         self._gt_splits = ('train', 'val', 'minival')
 
+        self._gt_classes = {
+            ix: self._load_coco_classes_annotation(ix)
+            for ix in self._image_index
+        }
+
     def _get_ann_file(self):
         prefix = 'instances' if self._image_set.find('test') == -1 \
                              else 'image_info'
@@ -99,6 +108,18 @@ class coco(imdb):
         anns = self._COCO.loadImgs(self._image_index)
         widths = [ann['width'] for ann in anns]
         return widths
+
+    def image_classes_at(self, i):
+        """
+        Return the gt class to image i in the image sequence.
+        """
+        return self.image_classes_from_index(self._image_index[i])
+
+    def image_classes_from_index(self, index):
+        """
+        Construct an image classes from the image's "index" identifier.
+        """
+        return self._gt_classes[index]
 
     def image_path_at(self, i):
         """
@@ -133,29 +154,34 @@ class coco(imdb):
         """
         Creates a roidb from pre-computed proposals of a particular methods.
         """
-        top_k = self.config['top_k']
-        cache_file = osp.join(self.cache_path, self.name +
-                              '_{:s}_top{:d}'.format(method, top_k) +
-                              '_roidb.pkl')
+        # top_k = self.config['top_k']
+        # cache_file = osp.join(self.cache_path, self.name +
+                              # '_{:s}_top{:d}'.format(method, top_k) +
+                              # '_roidb.pkl')
 
-        if osp.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{:s} {:s} roidb loaded from {:s}'.format(self.name, method,
-                                                            cache_file)
-            return roidb
+        # if osp.exists(cache_file):
+            # with open(cache_file, 'rb') as fid:
+                # roidb = cPickle.load(fid)
+            # print '{:s} {:s} roidb loaded from {:s}'.format(self.name, method,
+                                                            # cache_file)
+            # return roidb
 
-        if self._image_set in self._gt_splits:
-            gt_roidb = self.gt_roidb()
-            method_roidb = self._load_proposals(method, gt_roidb)
-            roidb = imdb.merge_roidbs(gt_roidb, method_roidb)
-            # Make sure we don't use proposals that are contained in crowds
-            roidb = _filter_crowd_proposals(roidb, self.config['crowd_thresh'])
-        else:
+        if cfg.WSL:
+            assert ('USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO)
+            # WSL train and test
             roidb = self._load_proposals(method, None)
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote {:s} roidb to {:s}'.format(method, cache_file)
+        else:
+            if self._image_set in self._gt_splits:
+                gt_roidb = self.gt_roidb()
+                method_roidb = self._load_proposals(method, gt_roidb)
+                roidb = imdb.merge_roidbs(gt_roidb, method_roidb)
+                # Make sure we don't use proposals that are contained in crowds
+                roidb = _filter_crowd_proposals(roidb, self.config['crowd_thresh'])
+            else:
+                roidb = self._load_proposals(method, None)
+        # with open(cache_file, 'wb') as fid:
+            # cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # print 'wrote {:s} roidb to {:s}'.format(method, cache_file)
         return roidb
 
     def _load_proposals(self, method, gt_roidb):
@@ -168,6 +194,9 @@ class coco(imdb):
           CS/vision/grouping/mcg/ and convert the file layout using
         lib/datasets/tools/mcg_munge.py.
         """
+        if method == 'MCG':
+            return self._load_mcg_roidb(gt_roidb)
+
         box_list = []
         top_k = self.config['top_k']
         valid_methods = [
@@ -204,6 +233,94 @@ class coco(imdb):
             height = im_ann['height']
             ds_utils.validate_boxes(boxes, width=width, height=height)
         return self.create_roidb_from_box_list(box_list, gt_roidb)
+
+    def _load_mcg_roidb(self, gt_roidb):
+        box_list = []
+        score_list = []
+        total_roi = 0
+        up_1024 = 0
+        up_2048 = 0
+        up_3072 = 0
+        up_4096 = 0
+
+        if cfg.USE_FEEDBACK:
+            box_fb_list, score_fb_list = self._feedback_roidb(gt_roidb)
+
+        for i, index in enumerate(self._image_index):
+            if i % 1000 == 0:
+                print '{:d} / {:d}'.format(i + 1, len(self._image_index))
+
+            img_size = PIL.Image.open(self.image_path_at(i)).size
+
+            box_file = osp.join(
+                cfg.DATA_DIR, 'coco_proposals', 'MCG', 'mat',
+                self._get_box_file(index))
+
+            raw_data = sio.loadmat(box_file)['boxes']
+            score_data = sio.loadmat(box_file)['scores']
+
+            # boxes = np.maximum(raw_data - 1, 0).astype(np.uint16)
+            boxes = raw_data.astype(np.uint16) - 1
+            scores = score_data.astype(np.float)
+
+            # Boxes from the MCG website are in (y1, x1, y2, x2) order
+            boxes = boxes[:, (1, 0, 3, 2)]
+
+            assert (boxes[:, 0] >= 0).all()
+            assert (boxes[:, 1] >= 0).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 3] >= boxes[:, 1]).all()
+            assert (boxes[:, 2] < img_size[0]).all()
+            assert (boxes[:, 3] < img_size[1]).all()
+
+            keep = ds_utils.unique_boxes(boxes)
+            boxes = boxes[keep, :]
+            scores = scores[keep]
+
+            keep = ds_utils.filter_small_boxes(boxes, self.config['min_size'])
+            boxes = boxes[keep, :]
+            scores = scores[keep]
+
+            # sort by confidence
+            sorted_ind = np.argsort(-scores.flatten())
+            scores = scores[sorted_ind, :]
+            boxes = boxes[sorted_ind, :]
+
+            assert boxes.shape[0] == scores.shape[
+                0], 'box num({}) should equal score num({})'.format(
+                    boxes.shape, scores.shape)
+
+            if cfg.USE_FEEDBACK:
+                insert_p = min(cfg.TRAIN.ROIS_PER_IM, boxes.shape[0])
+                boxes_h = boxes[:insert_p]
+                boxes_t = boxes[insert_p:]
+                scores_h = scores[:insert_p]
+                scores_t = scores[insert_p:]
+                boxes = np.vstack((boxes_h, box_fb_list[i], boxes_t))
+                scores = np.vstack((scores_h, score_fb_list[i], scores_t))
+
+            total_roi += boxes.shape[0]
+            if boxes.shape[0] > 1024:
+                up_1024 += 1
+            if boxes.shape[0] > 2048:
+                up_2048 += 1
+            if boxes.shape[0] > 3072:
+                up_3072 += 1
+            if boxes.shape[0] > 4096:
+                up_4096 += 1
+
+            box_list.append(boxes)
+            score_list.append(scores)
+
+        if cfg.USE_FEEDBACK:
+            cfg.TRAIN.ROIS_PER_IM += cfg.FEEDBACK_NUM
+
+        print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
+        print 'up_1024: ', up_1024
+        print 'up_2048: ', up_2048
+        print 'up_3072: ', up_3072
+        print 'up_4096: ', up_4096
+        return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def gt_roidb(self):
         """
@@ -280,6 +397,52 @@ class coco(imdb):
                 'gt_overlaps' : overlaps,
                 'flipped' : False,
                 'seg_areas' : seg_areas}
+
+    def _load_coco_classes_annotation(self, index):
+        """
+        Loads COCO bounding-box instance annotations. Crowd instances are
+        handled by marking their overlaps (with all categories) to -1. This
+        overlap value means that crowd "instances" are excluded from training.
+        """
+        im_ann = self._COCO.loadImgs(index)[0]
+        width = im_ann['width']
+        height = im_ann['height']
+
+        annIds = self._COCO.getAnnIds(imgIds=index, iscrowd=None)
+        objs = self._COCO.loadAnns(annIds)
+        # Sanitize bboxes -- some are invalid
+        valid_objs = []
+        for obj in objs:
+            x1 = np.max((0, obj['bbox'][0]))
+            y1 = np.max((0, obj['bbox'][1]))
+            x2 = np.min((width - 1, x1 + np.max((0, obj['bbox'][2] - 1))))
+            y2 = np.min((height - 1, y1 + np.max((0, obj['bbox'][3] - 1))))
+            if obj['area'] > 0 and x2 >= x1 and y2 >= y1:
+                obj['clean_bbox'] = [x1, y1, x2, y2]
+                valid_objs.append(obj)
+        objs = valid_objs
+        num_objs = len(objs)
+
+        if cfg.WSL:
+            # Lookup table to map from COCO category ids to our internal class
+            # indices
+            coco_cat_id_to_class_ind = dict([(self._class_to_coco_cat_id[cls],
+                                              self._class_to_ind[cls])
+                                             for cls in self._classes[0:]])
+        else:
+            # Lookup table to map from COCO category ids to our internal class
+            # indices
+            coco_cat_id_to_class_ind = dict([(self._class_to_coco_cat_id[cls],
+                                              self._class_to_ind[cls])
+                                             for cls in self._classes[1:]])
+
+        gt_classes = np.zeros(self.num_classes, dtype=np.int32)
+
+        for ix, obj in enumerate(objs):
+            cls = coco_cat_id_to_class_ind[obj['category_id']]
+            gt_classes[cls] = 1
+
+        return gt_classes
 
     def _get_box_file(self, index):
         # first 14 chars / first 22 chars / all chars + .mat
@@ -369,7 +532,7 @@ class coco(imdb):
         with open(res_file, 'w') as fid:
             json.dump(results, fid)
 
-    def evaluate_detections(self, all_boxes, output_dir):
+    def evaluate_detections(self, all_boxes, output_dir, all_scores=None):
         res_file = osp.join(output_dir, ('detections_' +
                                          self._image_set +
                                          self._year +

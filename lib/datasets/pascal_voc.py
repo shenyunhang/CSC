@@ -87,8 +87,8 @@ class pascal_voc(imdb):
             'Path does not exist: {}'.format(self._data_path)
 
         # test split of PASCAL VOC >2007
-        # if 'test' in self._name and int(self._year) > 2007:
-            # return
+        if 'test' in self._name and int(self._year) > 2007:
+            return
 
         self._gt_classes = {
             ix: self._load_pascal_classes_annotation(ix)
@@ -125,8 +125,8 @@ class pascal_voc(imdb):
         print 'left image number:', len(self._image_index)
 
         # test split of PASCAL VOC >2007
-        # if 'test' in self._name and int(self._year) > 2007:
-            # return
+        if 'test' in self._name and int(self._year) > 2007:
+            return
 
         self._gt_classes = {
             ix: self._load_pascal_classes_annotation(ix)
@@ -242,7 +242,7 @@ class pascal_voc(imdb):
         else:
             raise Exception('Unknown mode.')
 
-        threshold = 0.9
+        threshold = 1.0
 
         gt_roidb = []
         blacklist = []
@@ -498,10 +498,64 @@ class pascal_voc(imdb):
 
         box_list = []
         score_list = []
-        for i in xrange(raw_bboxes.shape[0]):
-            box_list.append(raw_bboxes[i][:, (1, 0, 3, 2)] - 1)
-            score_list.append(raw_scores[i][:, :])
+        total_roi = 0
+        up_1024 = 0
+        up_2048 = 0
+        up_3072 = 0
+        up_4096 = 0
 
+        for i in xrange(raw_bboxes.shape[0]):
+            if i % 1000 == 0:
+                print '{:d} / {:d}'.format(i + 1, len(self._image_index))
+
+            img_size = PIL.Image.open(self.image_path_at(i)).size
+
+            # boxes = raw_bboxes[i][:, (1, 0, 3, 2)] - 1
+            # scores = raw_scores[i][:, :]
+
+            boxes = raw_bboxes[i].astype(np.uint16) - 1
+            scores = raw_scores[i].astype(np.float)
+
+            boxes = boxes[:, (1, 0, 3, 2)]
+
+            assert (boxes[:, 0] >= 0).all()
+            assert (boxes[:, 1] >= 0).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 3] >= boxes[:, 1]).all()
+            assert (boxes[:, 2] < img_size[0]).all()
+            assert (boxes[:, 3] < img_size[1]).all()
+
+            keep = ds_utils.unique_boxes(boxes)
+            boxes = boxes[keep, :]
+            scores = scores[keep]
+
+            keep = ds_utils.filter_small_boxes(boxes, self.config['min_size'])
+            boxes = boxes[keep, :]
+            scores = scores[keep]
+
+            # sort by confidence
+            sorted_ind = np.argsort(-scores.flatten())
+            scores = scores[sorted_ind, :]
+            boxes = boxes[sorted_ind, :]
+
+            total_roi += boxes.shape[0]
+            if boxes.shape[0] > 1024:
+                up_1024 += 1
+            if boxes.shape[0] > 2048:
+                up_2048 += 1
+            if boxes.shape[0] > 3072:
+                up_3072 += 1
+            if boxes.shape[0] > 4096:
+                up_4096 += 1
+
+            box_list.append(boxes)
+            score_list.append(scores)
+
+        print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
+        print 'up_1024: ', up_1024
+        print 'up_2048: ', up_2048
+        print 'up_3072: ', up_3072
+        print 'up_4096: ', up_4096
         return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def _load_edge_boxes_roidb_orig(self, gt_roidb):
@@ -634,6 +688,7 @@ class pascal_voc(imdb):
         # TODO(YH): current we do not use cache, due to num_classes is different
         # cache_file = os.path.join(self.cache_path,
         # self.name + '_mcg_roidb.pkl')
+
         # if os.path.exists(cache_file):
         # with open(cache_file, 'rb') as fid:
         # roidb = cPickle.load(fid)

@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-"""Test a Fast R-CNN network on an image database."""
-
 import _init_paths
 from wsl.test import test_net_ensemble
 from wsl.test import test_net_ensemble2

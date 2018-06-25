@@ -117,12 +117,12 @@ class RoIDataLayer(caffe.Layer):
         if cfg.CONTEXT:
             top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM,
                              9)
-            self._name_to_top_map['rois_context'] = idx
+            self._name_to_top_map['roi_context'] = idx
             idx += 1
 
             top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM,
                              9)
-            self._name_to_top_map['rois_frame'] = idx
+            self._name_to_top_map['roi_frame'] = idx
             idx += 1
 
         top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM)

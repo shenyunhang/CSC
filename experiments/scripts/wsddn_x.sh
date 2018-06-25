@@ -44,7 +44,7 @@ case $DATASET in
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
-		ITERS=280000
+		ITERS=20
 		;;
 	*)
 		echo "No dataset given"
@@ -67,7 +67,7 @@ echo ---------------------------------------------------------------------
 echo showing the solver file:
 cat "models/${PT_DIR}/${NET}/wsddn_x/solver.prototxt"
 echo ---------------------------------------------------------------------
-time ./tools/train_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
 	--solver models/${PT_DIR}/${NET}/wsddn_x/solver.prototxt \
 	--weights data/imagenet_models/${NET}.v2.caffemodel \
 	--imdb ${TRAIN_IMDB} \
@@ -80,7 +80,7 @@ set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
 set -x
 
-time ./tools/test_net_wsl.py --gpu ${GPU_ID} \
+time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--def models/${PT_DIR}/${NET}/wsddn_x/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \

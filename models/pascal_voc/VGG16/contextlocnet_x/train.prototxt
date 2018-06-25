@@ -1,6 +1,6 @@
 name: "VGG_ILSVRC_16_layers"
-layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'rois_context' top: 'rois_frame' top: 'roi_num' top: 'roi_scores' top: 'labels'
-	python_param { module: 'roi_data_layer.layer_wsl' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
+layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_context' top: 'roi_frame' top: 'roi_scores' top: 'roi_num' top: 'labels'
+	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"
@@ -64,9 +64,9 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
-layer { name: "context_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "rois_context" top: "context_pool_conv5"
+layer { name: "context_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "roi_context" top: "context_pool_conv5"
 	loop_roi_pooling_param {pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
-layer { name: "frame_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "rois_frame" top: "frame_pool_conv5"
+layer { name: "frame_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "roi_frame" top: "frame_pool_conv5"
 	loop_roi_pooling_param {pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
 #------------------------------------ROI SCORE BOOSTING-------------------------------------------------------

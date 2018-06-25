@@ -181,8 +181,8 @@ def get_minibatch(roidb, num_classes):
 
     blobs['rois'] = rois_blob
     if cfg.CONTEXT:
-        blobs['rois_context'] = rois_context_blob
-        blobs['rois_frame'] = rois_frame_blob
+        blobs['roi_context'] = rois_context_blob
+        blobs['roi_frame'] = rois_frame_blob
 
     if cfg.USE_ROI_SCORE:
         # n * 1 to n

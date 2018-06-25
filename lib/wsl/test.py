@@ -37,10 +37,10 @@ def _get_context_rois_blob(im_rois, im_scale_factors):
     rois_outer, levels = _project_im_rois(im_outer_rois, im_scale_factors)
     rois, levels = _project_im_rois(im_rois, im_scale_factors)
 
-    rois_context_blob = np.hstack((levels, rois_outer, rois))
+    roi_context_blob = np.hstack((levels, rois_outer, rois))
     rois_frame_blob = np.hstack((levels, rois, rois_inner))
 
-    return rois_context_blob.astype(
+    return roi_context_blob.astype(
         np.float32, copy=False), rois_frame_blob.astype(
             np.float32, copy=False)
 
@@ -135,7 +135,7 @@ def _get_blobs(im, rois, roi_scores):
     blobs['roi_scores'] = _get_roi_scores_blob(roi_scores, im_scale_factors,
                                                len(rois))
     if cfg.CONTEXT:
-        blobs['rois_context'], blobs['rois_frame'] = _get_context_rois_blob(
+        blobs['roi_context'], blobs['roi_frame'] = _get_context_rois_blob(
             rois, im_scale_factors)
     return blobs, im_scale_factors
 
@@ -170,8 +170,8 @@ def im_detect(net, im, boxes, box_scores):
         # print index.shape,inv_index.shape
 
         if cfg.CONTEXT:
-            blobs['rois_context'] = blobs['rois_context'][index, :]
-            blobs['rois_frame'] = blobs['rois_frame'][index, :]
+            blobs['roi_context'] = blobs['roi_context'][index, :]
+            blobs['roi_frame'] = blobs['roi_frame'][index, :]
     blobs['roi_num'] = _get_roi_num_blob(blobs['rois'])
 
     # reshape network inputs
@@ -179,8 +179,8 @@ def im_detect(net, im, boxes, box_scores):
     net.blobs['rois'].reshape(*(blobs['rois'].shape))
     net.blobs['roi_scores'].reshape(*(blobs['roi_scores'].shape))
     if cfg.CONTEXT:
-        net.blobs['rois_context'].reshape(*(blobs['rois_context'].shape))
-        net.blobs['rois_frame'].reshape(*(blobs['rois_frame'].shape))
+        net.blobs['roi_context'].reshape(*(blobs['roi_context'].shape))
+        net.blobs['roi_frame'].reshape(*(blobs['roi_frame'].shape))
     net.blobs['roi_num'].reshape(*(blobs['roi_num'].shape))
 
     # do forward
@@ -189,9 +189,9 @@ def im_detect(net, im, boxes, box_scores):
     forward_kwargs['roi_scores'] = blobs['roi_scores'].astype(
         np.float32, copy=False)
     if cfg.CONTEXT:
-        forward_kwargs['rois_context'] = blobs['rois_context'].astype(
+        forward_kwargs['roi_context'] = blobs['roi_context'].astype(
             np.float32, copy=False)
-        forward_kwargs['rois_frame'] = blobs['rois_frame'].astype(
+        forward_kwargs['roi_frame'] = blobs['roi_frame'].astype(
             np.float32, copy=False)
     forward_kwargs['roi_num'] = blobs['roi_num'].astype(np.float32, copy=False)
 
@@ -247,16 +247,16 @@ def im_detect_bbox(net, im, boxes, box_scores):
         # box_scores = box_scores[index]
 
         if cfg.CONTEXT:
-            blobs['rois_context'] = blobs['rois_context'][index, :]
-            blobs['rois_frame'] = blobs['rois_frame'][index, :]
+            blobs['roi_context'] = blobs['roi_context'][index, :]
+            blobs['roi_frame'] = blobs['roi_frame'][index, :]
 
     # reshape network inputs
     net.blobs['data'].reshape(*(blobs['data'].shape))
     net.blobs['rois'].reshape(*(blobs['rois'].shape))
     net.blobs['roi_scores'].reshape(*(blobs['roi_scores'].shape))
     if cfg.CONTEXT:
-        net.blobs['rois_context'].reshape(*(blobs['rois_context'].shape))
-        net.blobs['rois_frame'].reshape(*(blobs['rois_frame'].shape))
+        net.blobs['roi_context'].reshape(*(blobs['roi_context'].shape))
+        net.blobs['roi_frame'].reshape(*(blobs['roi_frame'].shape))
 
     # do forward
     forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
@@ -264,9 +264,9 @@ def im_detect_bbox(net, im, boxes, box_scores):
     forward_kwargs['roi_scores'] = blobs['roi_scores'].astype(
         np.float32, copy=False)
     if cfg.CONTEXT:
-        forward_kwargs['rois_context'] = blobs['rois_context'].astype(
+        forward_kwargs['roi_context'] = blobs['roi_context'].astype(
             np.float32, copy=False)
-        forward_kwargs['rois_frame'] = blobs['rois_frame'].astype(
+        forward_kwargs['roi_frame'] = blobs['roi_frame'].astype(
             np.float32, copy=False)
 
     blobs_out = net.forward(**forward_kwargs)
@@ -441,6 +441,8 @@ def save_debug_im(im, target_size, save_path):
 
 def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
     """Test a network on an image database."""
+    if 'coco' in imdb.name:
+        max_per_image = 100
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh
 
@@ -817,8 +819,7 @@ def test_net_ensemble2(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
 
 
-def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
-                   vis=False):
+def test_net_cache(net, imdb, max_per_image=100, thresh=0.000000001, vis=False, scale=1.0):
     """Test a network on an image database."""
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh
@@ -876,6 +877,8 @@ def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
 
             # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
             cls_boxes = all_boxes_cache[j][i][inds, 0:4]
+            cls_boxes = resize_boxes(cls_boxes, scale)
+
             cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
                 .astype(np.float32, copy=False)
 
@@ -910,6 +913,24 @@ def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
+
+
+def resize_boxes(boxes, scale):
+    center_x = (boxes[:, 0] + boxes[:, 2]) / 2
+    center_y = (boxes[:, 1] + boxes[:, 3]) / 2
+
+    width = boxes[:, 2] - boxes[:, 0]
+    height = boxes[:, 3] - boxes[:, 1]
+
+    re_width = width * scale
+    re_height = height * scale
+
+    boxes[:, 0] = center_x - re_width / 2
+    boxes[:, 2] = center_x + re_width / 2
+    boxes[:, 1] = center_y - re_height / 2
+    boxes[:, 3] = center_y + re_height / 2
+
+    return boxes
 
 
 def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):

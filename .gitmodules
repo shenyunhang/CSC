@@ -4,8 +4,8 @@
 	branch = fast-rcnn
 [submodule "caffe-wsl"]
 	path = caffe-wsl
-	url = https://shenyunhang@bitbucket.org/shenyunhang/caffe-wsl.git
+	url = https://github.com/shenyunhang/caffe-wsl.git
 	branch = wsl
 [submodule "caffe-fwsl"]
 	path = caffe-fwsl
-	url = https://shenyunhang@bitbucket.org/shenyunhang/ssd.git
+	url = https://github.com/shenyunhang/caffe-fwsl.git
