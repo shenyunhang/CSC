@@ -33,18 +33,37 @@ case $DATASET in
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
 		ITERS=20
+		ITERS2=10
+		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		#TEST_IMDB="voc_2010_test"
+		TEST_IMDB="voc_2007_test"
+		PT_DIR="pascal_voc"
+		ITERS=20
+		ITERS2=10
+		;;
+	pascal_voc12)
+		TRAIN_IMDB="voc_2012_trainval"
+		#TEST_IMDB="voc_2012_test"
+		TEST_IMDB="voc_2007_test"
+		PT_DIR="pascal_voc"
+		ITERS=20
+		ITERS2=10
 		;;
 	pascal_voc07+12)
 		TRAIN_IMDB="voc_2007+2012_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
 		ITERS=20
+		ITERS2=10
 		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
 		ITERS=20
+		ITERS2=10
 		;;
 	*)
 		echo "No dataset given"
@@ -57,6 +76,15 @@ do
 	NET_PREFIX="${NET}_iter_${ITER}"
 	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
 	then
-		./experiments/scripts/wsddn_x_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+		./experiments/scripts/csc_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
+	fi
+done
+
+for((ITER=1;ITER<=ITERS2;ITER++))
+do
+	NET_PREFIX="${NET}_2_iter_${ITER}"
+	if [ ! -d "output/${EXP_DIR}/${TEST_IMDB}/${NET_PREFIX}" ]
+	then
+		./experiments/scripts/csc_test.sh ${GPU_ID} ${NET} ${DATASET} ${NET_PREFIX} ${EXTRA_ARGS}
 	fi
 done

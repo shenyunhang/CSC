@@ -35,8 +35,8 @@ def get_minibatch(roidb, num_classes):
     rois_scores_blob = np.zeros((0, 1), dtype=np.float32)
     roi_num_blob = np.zeros((0, 1), dtype=np.float32)
     labels_blob = np.zeros((0, num_classes), dtype=np.float32)
-    opg_filter_blob = np.zeros((0, num_classes), dtype=np.float32)
-    opg_io_blob = np.zeros((0, 1), dtype=np.float32)
+    cpg_filter_blob = np.zeros((0, num_classes), dtype=np.float32)
+    cpg_io_blob = np.zeros((0, 1), dtype=np.float32)
     for i_im in xrange(num_images):
         # x1 y1 x2 y2
         im_rois = roidb[i_im]['boxes'].astype(np.float32)
@@ -56,7 +56,7 @@ def get_minibatch(roidb, num_classes):
         if cfg.USE_ROI_SCORE:
             im_roi_scores = im_roi_scores[:rois_per_this_image]
 
-        if cfg.TRAIN.OPG_CACHE:
+        if cfg.TRAIN.CPG_CACHE:
             filter_blob_this = np.zeros(
                 (rois_per_this_image, num_classes), dtype=np.float32)
             for target_size in cfg.TRAIN.SCALES:
@@ -64,7 +64,7 @@ def get_minibatch(roidb, num_classes):
                     continue
                 filter_name = str(db_inds[i_im] * 10000 + target_size)
                 # print filter_name
-                filter_path = os.path.join(cfg.TRAIN.OPG_CACHE_PATH,
+                filter_path = os.path.join(cfg.TRAIN.CPG_CACHE_PATH,
                                            filter_name)
 
                 if os.path.exists(filter_path):
@@ -85,14 +85,14 @@ def get_minibatch(roidb, num_classes):
                 ],
                 dtype=np.float32)
 
-            opg_filter_blob = np.vstack((opg_filter_blob, filter_blob_this))
-            opg_io_blob = np.vstack((opg_io_blob, io_blob_this))
+            cpg_filter_blob = np.vstack((cpg_filter_blob, filter_blob_this))
+            cpg_io_blob = np.vstack((cpg_io_blob, io_blob_this))
 
         if cfg.TRAIN.ROI_AU:
             offset = 1.0 / im_scales[i_im] / cfg.SPATIAL_SCALE
             offset_step = cfg.TRAIN.ROI_AU_STEP
 
-            if cfg.TRAIN.OPG_CACHE:
+            if cfg.TRAIN.CPG_CACHE:
                 filter_blob_this_sum = np.sum(filter_blob_this, 1)
                 au_ind = filter_blob_this_sum == 0
             else:
@@ -188,9 +188,9 @@ def get_minibatch(roidb, num_classes):
 
     blobs['label'] = labels_blob
 
-    if cfg.TRAIN.OPG_CACHE:
-        blobs['opg_filter'] = opg_filter_blob
-        blobs['opg_io'] = opg_io_blob
+    if cfg.TRAIN.CPG_CACHE:
+        blobs['cpg_filter'] = cpg_filter_blob
+        blobs['cpg_io'] = cpg_io_blob
 
     # print "rois_blob: ", rois_blob
     # print "rois_context_blob: ", rois_context_blob
@@ -249,14 +249,14 @@ def _get_image_blob(roidb, scale_inds):
             im_crop = np.array(
                 [0, 0, im.shape[0] - 1, im.shape[1] - 1], dtype=np.uint16)
 
-        if cfg.OPG_DEBUG:
+        if cfg.CSC_DEBUG:
             im_save = im
 
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]
         im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                                         cfg.TRAIN.MAX_SIZE)
 
-        if cfg.OPG_DEBUG:
+        if cfg.CSC_DEBUG:
             im_save = cv2.resize(
                 im_save,
                 None,

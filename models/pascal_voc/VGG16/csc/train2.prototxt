@@ -1,5 +1,6 @@
 name: "VGG_ILSVRC_16_layers"
 layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'roi_num' top: 'labels'
+	#top: 'cpg_filter' top: 'cpg_io'
 	python_param { module: 'wsl_roi_data_layer.layer' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
 #-------------------------------------------------------------------------------------------------
@@ -80,7 +81,8 @@ layer { name: "fc6" type: "InnerProduct" bottom: "boost" top: "fc6"
 
 layer { name: "relu6" type: "ReLU" bottom: "fc6" top: "fc6" }
 
-layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6" dropout_param { dropout_ratio: 0.5 }}
+layer { name: "drop6" type: "Dropout" bottom: "fc6" top: "fc6"
+	dropout_param { dropout_ratio: 0.5 }}
 
 layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
@@ -88,15 +90,18 @@ layer { name: "fc7" type: "InnerProduct" bottom: "fc6" top: "fc7"
 
 layer { name: "relu7" type: "ReLU" bottom: "fc7" top: "fc7" }
 
-layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7" dropout_param { dropout_ratio: 0.5 }}
+layer { name: "drop7" type: "Dropout" bottom: "fc7" top: "fc7"
+	dropout_param { dropout_ratio: 0.5 }}
 
 #-----------------------------------TWO STREAM----------------------------------------------------------------
 layer { name: "fc8c" type: "InnerProduct" bottom: "fc7" top: "fc8c" 
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
-	inner_product_param { num_output: 20 weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
+	inner_product_param { num_output: 20
+	weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 layer { name: "fc8d" type: "InnerProduct" bottom: "fc7" top: "fc8d" 
 	param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }
-	inner_product_param { num_output: 20 weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
+	inner_product_param { num_output: 20
+	weight_filler { type: "xavier" } bias_filler { type: "constant" value: 0 }}}
 
 layer { name: "alpha_cls" type: "Softmax" bottom: "fc8c" top: "alpha_cls" softmax_param { axis: 1 }}
 layer { name: "alpha_det" type: "Softmax" bottom: "fc8d" top: "alpha_det" softmax_param { axis: 0 }}
@@ -109,8 +114,53 @@ layer { name: "bbox_score" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_de
 layer { name: "cls_score" type: "RoIScorePooling" bottom: "bbox_score" bottom: "roi_num" top: "cls_score"
 	roi_score_pooling_param { pool: SUM axis: 0 }}
 
-layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
-	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+#layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
+#	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
 #layer { name: "loss_feature" type: "SmoothFeatureLoss" bottom: "fc7" bottom: "rois" bottom: "bbox_score" bottom: "labels"
 #	top: "loss_feature" loss_weight: 0.001 smooth_feature_loss_param { debug_info: false }}
+
+#-----------------------------------CPG-----------------------------------------------------------------------
+layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "rois" bottom: "bbox_score"
+	#bottom: "cpg_filter" bottom: "cpg_io"
+	top: "cpg_roi_select"
+	top: "labels_pos" top: "labels_neg"
+	cpg_param { is_cpg: false mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
+        max_num_im_cpg: -1 ignore_label: 12
+	cpg_blob_name: "data"
+	#cpg_blob_name: "conv1_2"
+	#cpg_blob_name: "conv2_2"
+	#cpg_blob_name: "conv3_3"
+	#cpg_blob_name: "conv4_3"
+	#cpg_blob_name: "conv5_3"
+	predict_blob_name: "cls_score"
+	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
+	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
+
+#-----------------------------------POOLING-------------------------------------------------------------------
+layer { name: "pos_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "cpg_roi_select"
+	top: "score_pos" propagate_down: true propagate_down: false polar_constraint_param { polar: true }}
+layer { name: "neg_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "cpg_roi_select"
+	top: "score_neg" propagate_down: true propagate_down: false polar_constraint_param { polar: false }}
+
+layer { name: "cls_pos" type: "RoIScorePooling" bottom: "score_pos" bottom: "roi_num" top: "cls_pos"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_neg" type: "RoIScorePooling" bottom: "score_neg" bottom: "roi_num" top: "cls_neg"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
+
+#-----------------------------------LOSS----------------------------------------------------------------------
+layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "labels_pos" top: "loss_pos" loss_weight: 1
+	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 1
+	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
+
+#layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
+#	param { lr_mult: 0 decay_mult: 0 }
+#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
+#	max_num_im_center: -1 center_filler { type: "gaussian" } ignore_label: 12 }
+#	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
+
+#-----------------------------------STATISTICS----------------------------------------------------------------
+layer { name: "statistics" type: "Statistics" bottom: "labels" bottom: "cls_score" bottom: "cls_pos" bottom: "cls_neg"
+	bottom: "cpg_roi_select"
+	propagate_down: false propagate_down: false propagate_down: false propagate_down: false propagate_down: false }

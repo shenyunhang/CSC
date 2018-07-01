@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
     output_dir = get_output_dir(imdb)
     print 'Output will be saved to `{:s}`'.format(output_dir)
-    if cfg.OPG_DEBUG:
+    if cfg.CSC_DEBUG:
         vis_dir = get_vis_dir(imdb)
 
     train_net(args.solver, roidb, output_dir,

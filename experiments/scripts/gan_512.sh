@@ -118,31 +118,31 @@ do
 		then
 			weights=data/imagenet_models/${NET}.v2.caffemodel
 			time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-				--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
+				--solver models/${PT_DIR}/${NET}/csc/solver.prototxt \
 				--weights ${weights} \
 				--imdb ${TRAIN_IMDB} \
 				--iters ${ITERS} \
-				--cfg experiments/cfgs/cpg.yml \
+				--cfg experiments/cfgs/csc.yml \
 				${EXTRA_ARGS} \
-				EXP_DIR ${EXP_DIR}/cpg/${step} \
+				EXP_DIR ${EXP_DIR}/csc/${step} \
 				USE_FEEDBACK ${use_feedback} \
 				FEEDBACK_DIR "${feedback_dir_trainval}" \
 				FEEDBACK_NUM ${feedback_num}
 
-			weights=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel
+			weights=output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel
 		else
-			weights=output/${EXP_DIR}/cpg/$((${step}-1))/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}.caffemodel
+			weights=output/${EXP_DIR}/csc/$((${step}-1))/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}.caffemodel
 		fi
 
 
 		time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-			--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
+			--solver models/${PT_DIR}/${NET}/csc/solver2.prototxt \
 			--weights ${weights} \
 			--imdb ${TRAIN_IMDB} \
 			--iters ${ITERS2} \
-			--cfg experiments/cfgs/cpg.yml \
+			--cfg experiments/cfgs/csc.yml \
 			${EXTRA_ARGS} \
-			EXP_DIR ${EXP_DIR}/cpg/${step} \
+			EXP_DIR ${EXP_DIR}/csc/${step} \
 			USE_FEEDBACK ${use_feedback} \
 			FEEDBACK_DIR "${feedback_dir_trainval}" \
 			FEEDBACK_NUM ${feedback_num}
@@ -154,7 +154,7 @@ do
 	echo "TEST F:"
 	if [ "$start" = true  ]
 	then
-		NET_FINAL=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}.caffemodel
+		NET_FINAL=output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}.caffemodel
 
 		#use_feedback=False
 		#feedback_dir_test=""
@@ -162,24 +162,24 @@ do
 		#feedback_num=0
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+			--def models/${PT_DIR}/${NET}/csc/test.prototxt \
 			--net ${NET_FINAL} \
 			--imdb ${TEST_IMDB} \
-			--cfg experiments/cfgs/cpg.yml \
+			--cfg experiments/cfgs/csc.yml \
 			${EXTRA_ARGS} \
-			EXP_DIR ${EXP_DIR}/cpg/${step} \
+			EXP_DIR ${EXP_DIR}/csc/${step} \
 			USE_FEEDBACK ${use_feedback} \
 			FEEDBACK_DIR "${feedback_dir_test}" \
 			FEEDBACK_NUM ${feedback_num}
 
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+			--def models/${PT_DIR}/${NET}/csc/test.prototxt \
 			--net ${NET_FINAL} \
 			--imdb ${TRAIN_IMDB} \
-			--cfg experiments/cfgs/cpg.yml \
+			--cfg experiments/cfgs/csc.yml \
 			${EXTRA_ARGS} \
-			EXP_DIR ${EXP_DIR}/cpg/${step} \
+			EXP_DIR ${EXP_DIR}/csc/${step} \
 			USE_FEEDBACK ${use_feedback} \
 			FEEDBACK_DIR "${feedback_dir_trainval}" \
 			FEEDBACK_NUM ${feedback_num}
@@ -211,7 +211,7 @@ do
 			--iters ${ITERS} \
 			--cfg experiments/cfgs/gan_ssd_512.yml \
 			${EXTRA_ARGS} \
-			TRAIN.PSEUDO_PATH output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}/detections_o.pkl
+			TRAIN.PSEUDO_PATH output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}/detections_o.pkl
 	fi
 
 

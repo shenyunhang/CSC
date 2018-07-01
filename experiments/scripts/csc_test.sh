@@ -7,10 +7,11 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 NET=$2
 DATASET=$3
+NET_PREFIX=$4
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:3:$len}
+EXTRA_ARGS=${array[@]:4:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 is_next=false
@@ -32,13 +33,28 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=40000
+		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		#TEST_IMDB="voc_2010_test"
+		TEST_IMDB="voc_2007_test"
+		PT_DIR="pascal_voc"
+		;;
+	pascal_voc12)
+		TRAIN_IMDB="voc_2012_trainval"
+		#TEST_IMDB="voc_2012_test"
+		TEST_IMDB="voc_2007_test"
+		PT_DIR="pascal_voc"
+		;;
+	pascal_voc07+12)
+		TRAIN_IMDB="voc_2007+2012_trainval"
+		TEST_IMDB="voc_2007_test"
+		PT_DIR="pascal_voc"
 		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
-		ITERS=280000
 		;;
 	*)
 		echo "No dataset given"
@@ -47,7 +63,8 @@ case $DATASET in
 esac
 
 mkdir -p "experiments/logs/${EXP_DIR}"
-LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
+EXTRA_ARGS_SLUG_=`echo "$EXTRA_ARGS_SLUG" | sed 's/\//_/g'`
+LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${NET_PREFIX}_${EXTRA_ARGS_SLUG_}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
 LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
@@ -57,25 +74,11 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-time ./tools/train_net.py --gpu ${GPU_ID} \
-	--solver models/${PT_DIR}/${NET}/fast_rcnn_wsl/solver.prototxt \
-	--weights /home/shenyunhang/Documents/wsl/output/vgg16_0707/voc_2007_trainval/VGG16_iter_20.caffemodel \
-	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/fast_rcnn_wsl.yml \
-	${EXTRA_ARGS}
+NET_FINAL=output/${EXP_DIR}/${TRAIN_IMDB}/${NET_PREFIX}.caffemodel
 
-	#--weights data/imagenet_models/${NET}.v2.caffemodel \
-	#--weights output/vgg16_fast_rcnn_wsl_/voc_2007_trainval/VGG16_iter_40000.caffemodel \
-	#--weights output/vgg16_csc_0304/voc_2007_trainval/VGG16_iter_2.caffemodel \
-
-set +x
-NET_FINAL=`grep -B 1 "done solving" ${LOG} | grep "Wrote snapshot" | awk '{print $4}'`
-set -x
-
-time ./tools/test_net.py --gpu ${GPU_ID} \
-	--def models/${PT_DIR}/${NET}/fast_rcnn_wsl/test.prototxt \
+time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
+	--def models/${PT_DIR}/${NET}/csc/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/fast_rcnn_wsl.yml \
+	--cfg experiments/cfgs/csc.yml \
 	${EXTRA_ARGS}

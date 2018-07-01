@@ -32,14 +32,28 @@ case $DATASET in
 		TRAIN_IMDB="voc_2007_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=10
+		ITERS=20
+		ITERS2=10
+		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		TEST_IMDB="voc_2010_test"
+		PT_DIR="pascal_voc"
+		ITERS=20
+		ITERS2=10
+		;;
+	pascal_voc12)
+		TRAIN_IMDB="voc_2012_trainval"
+		TEST_IMDB="voc_2012_test"
+		PT_DIR="pascal_voc"
+		ITERS=20
 		ITERS2=10
 		;;
 	pascal_voc07+12)
 		TRAIN_IMDB="voc_2007+2012_trainval"
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
-		ITERS=10
+		ITERS=20
 		ITERS2=10
 		;;
 	coco)
@@ -47,6 +61,7 @@ case $DATASET in
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
 		ITERS=20
+		ITERS2=10
 		;;
 	*)
 		echo "No dataset given"
@@ -67,26 +82,26 @@ echo ---------------------------------------------------------------------
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
-cat "models/${PT_DIR}/${NET}/wsddn/solver.prototxt"
+cat "models/${PT_DIR}/${NET}/csc/solver.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-	--solver models/${PT_DIR}/${NET}/wsddn/solver.prototxt \
+	--solver models/${PT_DIR}/${NET}/csc/solver.prototxt \
 	--weights data/imagenet_models/${NET}.v2.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
-	--cfg experiments/cfgs/wsddn.yml \
+	--cfg experiments/cfgs/csc.yml \
 	${EXTRA_ARGS}
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
-cat "models/${PT_DIR}/${NET}/wsddn/solver2.prototxt"
+cat "models/${PT_DIR}/${NET}/csc/solver2.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-	--solver models/${PT_DIR}/${NET}/wsddn/solver2.prototxt \
-	--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS2}.caffemodel \
+	--solver models/${PT_DIR}/${NET}/csc/solver2.prototxt \
+	--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel \
 	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/wsddn.yml \
+	--iters ${ITERS2} \
+	--cfg experiments/cfgs/csc.yml \
 	${EXTRA_ARGS}
 
 #--------------------------------------------------------------------------------------------------
@@ -95,8 +110,8 @@ NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | 
 set -x
 
 time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	--def models/${PT_DIR}/${NET}/wsddn/test.prototxt \
+	--def models/${PT_DIR}/${NET}/csc/test.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/wsddn.yml \
+	--cfg experiments/cfgs/csc.yml \
 	${EXTRA_ARGS}

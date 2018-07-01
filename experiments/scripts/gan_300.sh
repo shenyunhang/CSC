@@ -128,48 +128,48 @@ do
 		then
 			F=data/imagenet_models/${NET}.v2
 			time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-				--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
+				--solver models/${PT_DIR}/${NET}/csc/solver.prototxt \
 				--weights ${F}.caffemodel \
 				--imdb ${TRAIN_IMDB} \
 				--iters ${ITERS} \
-				--cfg experiments/cfgs/cpg.yml \
+				--cfg experiments/cfgs/csc.yml \
 				${EXTRA_ARGS} \
-				EXP_DIR ${EXP_DIR}/cpg/${step} \
+				EXP_DIR ${EXP_DIR}/csc/${step} \
 				USE_FEEDBACK ${use_feedback} \
 				FEEDBACK_DIR "${feedback_dir_trainval}" \
 				FEEDBACK_NUM ${feedback_num}
 		fi
-		F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_iter_${ITERS}
+		F=output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_iter_${ITERS}
 
 		if [ ${ITERS2} -gt 0 ]
 		then
 			if [ "$start" = true  ]
 			then
 				time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-					--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
+					--solver models/${PT_DIR}/${NET}/csc/solver2.prototxt \
 					--weights ${F}.caffemodel \
 					--imdb ${TRAIN_IMDB} \
 					--iters ${ITERS2} \
-					--cfg experiments/cfgs/cpg.yml \
+					--cfg experiments/cfgs/csc.yml \
 					${EXTRA_ARGS} \
-					EXP_DIR ${EXP_DIR}/cpg/${step} \
+					EXP_DIR ${EXP_DIR}/csc/${step} \
 					USE_FEEDBACK ${use_feedback} \
 					FEEDBACK_DIR "${feedback_dir_trainval}" \
 					FEEDBACK_NUM ${feedback_num}
 			fi
-			F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}
+			F=output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}
 		fi
 	else
 		if [ "$start" = true  ]
 		then
 			time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-				--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
+				--solver models/${PT_DIR}/${NET}/csc/solver2.prototxt \
 				--weights ${F}.caffemodel \
 				--imdb ${TRAIN_IMDB} \
 				--iters ${ITERS_F} \
-				--cfg experiments/cfgs/cpg.yml \
+				--cfg experiments/cfgs/csc.yml \
 				${EXTRA_ARGS} \
-				EXP_DIR ${EXP_DIR}/cpg/${step} \
+				EXP_DIR ${EXP_DIR}/csc/${step} \
 				RNG_SEED ${RANDOM} \
 				USE_FEEDBACK ${use_feedback} \
 				FEEDBACK_DIR "${feedback_dir_trainval}" \
@@ -177,7 +177,7 @@ do
 		else
 			echo ${RANDOM}
 		fi
-		F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS_F}
+		F=output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS_F}
 	fi
 
 
@@ -185,27 +185,28 @@ do
 	echo "TEST F:"
 	if [ "$start" = true  ]
 	then
+		GPU_ID2=$((GPU_ID + 1)) 
 		#some_cmd > some_file 2>&1 &
-		time ./tools/wsl/test_net.py --gpu 2 \
-			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+		time ./tools/wsl/test_net.py --gpu ${GPU_ID2} \
+			--def models/${PT_DIR}/${NET}/csc/test.prototxt \
 			--net ${F}.caffemodel \
 			--imdb ${TEST_IMDB} \
-			--cfg experiments/cfgs/cpg.yml \
+			--cfg experiments/cfgs/csc.yml \
 			${EXTRA_ARGS} \
-			EXP_DIR ${EXP_DIR}/cpg/${step} \
+			EXP_DIR ${EXP_DIR}/csc/${step} \
 			USE_FEEDBACK ${use_feedback} \
 			FEEDBACK_DIR "${feedback_dir_test}" \
 			FEEDBACK_NUM ${feedback_num} \
-			> experiments/logs/${EXP_DIR}/cpg_test_${step}.txt 2>&1 &
+			> experiments/logs/${EXP_DIR}/csc_test_${step}.txt 2>&1 &
 
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+			--def models/${PT_DIR}/${NET}/csc/test.prototxt \
 			--net ${F}.caffemodel \
 			--imdb ${TRAIN_IMDB} \
-			--cfg experiments/cfgs/cpg.yml \
+			--cfg experiments/cfgs/csc.yml \
 			${EXTRA_ARGS} \
-			EXP_DIR ${EXP_DIR}/cpg/${step} \
+			EXP_DIR ${EXP_DIR}/csc/${step} \
 			USE_FEEDBACK ${use_feedback} \
 			FEEDBACK_DIR "${feedback_dir_trainval}" \
 			FEEDBACK_NUM ${feedback_num}

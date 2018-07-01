@@ -459,7 +459,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
                    for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, net)
-    if cfg.OPG_DEBUG:
+    if cfg.CSC_DEBUG:
         vis_dir = get_vis_dir(imdb, net)
 
     # timers
@@ -493,7 +493,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
         scores = None
         boxes = None
         for target_size in test_scales:
-            if cfg.OPG_DEBUG:
+            if cfg.CSC_DEBUG:
                 save_path = os.path.join(vis_dir, str(save_id) + '_.png')
                 save_debug_im(im, target_size, save_path)
                 save_id += 1
@@ -511,7 +511,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
                     boxes,
                     boxes_scale), 'boxes at each scale should be the same'
 
-            if cfg.OPG_DEBUG:
+            if cfg.CSC_DEBUG:
                 os.remove(save_path)
 
         if cfg.TEST.USE_FLIPPED:
@@ -524,7 +524,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
 
             for target_size in test_scales:
                 boxes_scale_o = boxes_scale
-                if cfg.OPG_DEBUG:
+                if cfg.CSC_DEBUG:
                     save_path = os.path.join(vis_dir, str(save_id) + '_.png')
                     save_debug_im(im_flip, target_size, save_path)
                     save_id += 1
@@ -535,7 +535,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
 
                 scores += scores_scale
 
-                if cfg.OPG_DEBUG:
+                if cfg.CSC_DEBUG:
                     os.remove(save_path)
 
         _t['im_detect'].toc()
@@ -589,7 +589,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
             .format(i + 1, num_images, _t['im_detect'].average_time,
                     _t['misc'].average_time)
 
-    if cfg.OPG_DEBUG:
+    if cfg.CSC_DEBUG:
         return
 
     det_file = os.path.join(output_dir, 'detections.pkl')
@@ -834,7 +834,7 @@ def test_net_cache(net, imdb, max_per_image=100, thresh=0.000000001, vis=False, 
                   for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, net)
-    if cfg.OPG_DEBUG:
+    if cfg.CSC_DEBUG:
         vis_dir = get_vis_dir(imdb, net)
 
     det_file = os.path.join(output_dir, 'detections.pkl')
@@ -945,7 +945,7 @@ def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
                   for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, net)
-    if cfg.OPG_DEBUG:
+    if cfg.CSC_DEBUG:
         vis_dir = get_vis_dir(imdb, net)
 
     # timers
@@ -983,7 +983,7 @@ def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
         scores = None
         boxes = None
         for target_size in test_scales:
-            if cfg.OPG_DEBUG:
+            if cfg.CSC_DEBUG:
                 # save_subdir = time.strftime("%Y-%m-%d", time.gmtime())
                 # save_dir = os.path.join('tmp', save_subdir)
                 # if not os.path.exists(save_dir):
@@ -1010,7 +1010,7 @@ def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
             box_proposals_flip[:, 2] = im.shape[1] - oldx1 - 1
 
             for target_size in test_scales:
-                if cfg.OPG_DEBUG:
+                if cfg.CSC_DEBUG:
                     # save_subdir = time.strftime("%Y-%m-%d", time.gmtime())
                     # save_dir = os.path.join('tmp', save_subdir)
                     cv2.imwrite(

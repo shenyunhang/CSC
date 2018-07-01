@@ -6,7 +6,7 @@ from easydict import EasyDict as edict
 
 __C = edict()
 # Consumers can get config by:
-#   from cpg.config import cfg_cpg
+#   from ssd.config import cfg_ssd
 cfg_ssd = __C
 
 #
@@ -166,8 +166,8 @@ __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
 __C.TRAIN.ROI_AU = False
 __C.TRAIN.ROI_AU_STEP = 1
 
-__C.TRAIN.OPG_CACHE = False
-__C.TRAIN.OPG_CACHE_PATH = 'data/opg_cache/'
+__C.TRAIN.CPG_CACHE = False
+__C.TRAIN.CPG_CACHE_PATH = 'data/cpg_cache/'
 
 # Overlap required between a ROI and ground-truth box in order for that ROI to
 # be used as a bounding-box regression training example
@@ -282,7 +282,7 @@ __C.USE_GPU_NMS = True
 # Default GPU device id
 __C.GPU_ID = 0
 
-__C.OPG_DEBUG = False
+__C.CSC_DEBUG = False
 
 __C.CONTEXT = False
 __C.CONTEXT_RATIO = 1.8

@@ -26,8 +26,8 @@ def get_minibatch(roidb, num_classes):
     roi_score_blob = np.zeros((0, 1), dtype=np.float32)
     roi_num_blob = np.zeros((0, 1), dtype=np.float32)
     label_blob = np.zeros((0, num_classes), dtype=np.float32)
-    opg_filter_blob = np.zeros((0, num_classes), dtype=np.float32)
-    opg_io_blob = np.zeros((0, 1), dtype=np.float32)
+    cpg_filter_blob = np.zeros((0, num_classes), dtype=np.float32)
+    cpg_io_blob = np.zeros((0, 1), dtype=np.float32)
     for i_im in xrange(num_images):
         # 处理图像
         img = cv2.imread(roidb[i_im]['image'])

@@ -9,7 +9,7 @@ TRAIN:
         USE_PREFETCH: True
         PROPOSAL_METHOD: edge_boxes
         ASPECT_GROUPING: False
-        OPG_CACHE: False
+        CPG_CACHE: False
 
 TEST:
         SCALES: [480, 576, 688, 864, 1200]

@@ -4,12 +4,10 @@ TRAIN:
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
         USE_CROP: True
-        USE_DISTORTION: True
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
         PROPOSAL_METHOD: mcg
         ASPECT_GROUPING: False
-        CPG_CACHE: False
 
 TEST:
         SCALES: [480, 576, 688, 864, 1200]
@@ -17,9 +15,10 @@ TEST:
         ROIS_PER_IM: 2048
         NMS: 0.5
         PROPOSAL_METHOD: mcg
+
 RNG_SEED: 6
-EXP_DIR: contextlocnet_x
-CONTEXT: True
+EXP_DIR: csc
+CONTEXT: False
 USE_ROI_SCORE: True
 USE_BG: False
 WSL: True
