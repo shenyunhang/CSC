@@ -1,4 +1,4 @@
-# CPG
+# CSC
 Object-Aware Spatial Constraint for Weakly Supervised Detection
 
 ### Contents
@@ -30,17 +30,17 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 
 ### Installation
 
-1. Clone the CPG repository
+1. Clone the CSC repository
   ```Shell
   # Make sure to clone with --recursive
-  git clone --recursive https://github.com/shenyunhang/CPG.git
+  git clone --recursive https://github.com/shenyunhang/CSC.git
   ```
 
-2. We'll call the directory that you cloned CPG into `CPG_ROOT`
+2. We'll call the directory that you cloned CSC into `CSC_ROOT`
 
    *Ignore notes 1 and 2 if you followed step 1 above.*
 
-   **Note 1:** If you didn't clone CPG with the `--recursive` flag, then you'll need to manually clone the `caffe-wsl` submodule:
+   **Note 1:** If you didn't clone CSC with the `--recursive` flag, then you'll need to manually clone the `caffe-wsl` submodule:
     ```Shell
     git submodule update --init --recursive
     ```
@@ -48,13 +48,13 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 
 3. Build the Cython modules
     ```Shell
-    cd $CPG_ROOT/lib
+    cd $CSC_ROOT/lib
     make
     ```
 
 4. Build Caffe and pycaffe
     ```Shell
-    cd $CPG_ROOT/caffe-wsl
+    cd $CSC_ROOT/caffe-wsl
     # Now follow the Caffe installation instructions here:
     #   http://caffe.berkeleyvision.org/installation.html
 
@@ -91,7 +91,7 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 8. Create symlinks for the PASCAL VOC dataset
 
 	```Shell
-    cd $CPG_ROOT/data
+    cd $CSC_ROOT/data
     ln -s $VOCdevkit VOCdevkit2007
     ```
     Using symlinks is a good idea because you will likely want to share the same PASCAL dataset installation between multiple projects.
@@ -110,18 +110,18 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 Pre-trained ImageNet models can be downloaded for the three networks described in the paper: ZF and VGG16.
 
 ```Shell
-cd $CPG_ROOT
+cd $CSC_ROOT
 ./data/scripts/fetch_imagenet_models.sh
 ```
 
 ### Usage
 
-To train and test a CPG detector, use `experiments/scripts/cpg.sh`.
-Output is written underneath `$CPG_ROOT/output`.
+To train and test a CSC detector, use `experiments/scripts/csc.sh`.
+Output is written underneath `$CSC_ROOT/output`.
 
 ```Shell
-cd $CPG_ROOT
-./experiments/scripts/cpg.sh [GPU_ID] [NET] [--set ...]
+cd $CSC_ROOT
+./experiments/scripts/csc.sh [GPU_ID] [NET] [--set ...]
 # GPU_ID is the GPU you want to train on
 # NET in {VGG_CNN_F, VGG_CNN_M_1024, VGG16} is the network arch to use
 # --set ... allows you to specify configure options, e.g.
@@ -131,12 +131,12 @@ cd $CPG_ROOT
 Example:
 
 ```Shell
-./experiments/scripts/cpg.sh 0 VGG16 pascal_voc --set EXP_DIR cpg
+./experiments/scripts/csc.sh 0 VGG16 pascal_voc --set EXP_DIR csc
 ```
 
 This will reproduction the VGG16 result in paper.
 
-Trained CPG networks are saved under:
+Trained CSC networks are saved under:
 
 ```
 output/<experiment directory>/<dataset name>/
