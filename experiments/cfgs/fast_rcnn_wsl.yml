@@ -9,8 +9,8 @@ TEST:
         #MAX_SIZE: 2000
         PROPOSAL_METHOD: mcg
 USE_PSEUDO: True
-#PSEUDO_PATH: 'output/EXP_DIR/DATASET_trainval/VGG16_iter_20/detections.pkl'
-PSEUDO_PATH: 'output/vgg16_csc_0703/voc_2012_trainval/VGG16_iter_20/detections.pkl'
+#PSEUDO_PATH: 'output/EXP_DIR/DATASET_trainval/VGG16_2_iter_10/detections.pkl'
+PSEUDO_PATH: 'output/vgg16_csc_0703/voc_2012_trainval/VGG16_2_iter_10/detections.pkl'
 RNG_SEED: 6
 EXP_DIR: fast_rcnn_wsl
 WSL: False
