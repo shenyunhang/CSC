@@ -2,7 +2,7 @@ TRAIN:
         SCALES: [480, 576, 688, 864, 1200]
         MAX_SIZE: 2000
         IMS_PER_BATCH: 1
-        ROIS_PER_IM: 2048
+        ROIS_PER_IM: 2000
         USE_CROP: True
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
@@ -12,7 +12,7 @@ TRAIN:
 TEST:
         SCALES: [480, 576, 688, 864, 1200]
         MAX_SIZE: 2000
-        ROIS_PER_IM: 2048
+        ROIS_PER_IM: 2000
         NMS: 0.5
         PROPOSAL_METHOD: mcg
 

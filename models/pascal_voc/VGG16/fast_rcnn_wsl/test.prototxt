@@ -461,10 +461,10 @@ layer {
   }
 }
 layer {
-  name: "cls_score"
+  name: "cls_score_"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score"
+  top: "cls_score_"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -513,6 +513,6 @@ layer {
 layer {
   name: "cls_prob"
   type: "Softmax"
-  bottom: "cls_score"
+  bottom: "cls_score_"
   top: "cls_prob"
 }

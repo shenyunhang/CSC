@@ -1,13 +1,16 @@
 TRAIN:
-        MAX_SIZE: 2000
         USE_PREFETCH: True
         PROPOSAL_METHOD: mcg
+        #SCALES: !!python/tuple [480, 576, 688, 864, 1200]
+        #MAX_SIZE: 2000
 
 TEST:
-        MAX_SIZE: 2000
+        #SCALES: !!python/tuple [480, 576, 688, 864, 1200]
+        #MAX_SIZE: 2000
         PROPOSAL_METHOD: mcg
 USE_PSEUDO: True
-PSEUDO_PATH: '/home/shenyunhang/Documents/wsl/output/vgg16_0725/voc_2007_trainval/VGG16_iter_20/detections.pkl'
+#PSEUDO_PATH: 'output/EXP_DIR/DATASET_trainval/VGG16_iter_20/detections.pkl'
+PSEUDO_PATH: 'output/vgg16_csc_0703/voc_2012_trainval/VGG16_iter_20/detections.pkl'
 RNG_SEED: 6
 EXP_DIR: fast_rcnn_wsl
 WSL: False

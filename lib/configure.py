@@ -29,8 +29,8 @@ cfg = __C
 
 __C.WSL = False
 
-# __C.PSEUDO_PATH = 'output/csc/voc_2007_trainval/detections.pkl'
-# __C.PSEUDO_PATH = 'output/vgg16_fast_rcnn_wsl_0313/voc_2007_trainval/vgg16_fast_rcnn_iter_40000/detections_o.pkl'
+__C.USE_PSEUDO = False
+__C.PSEUDO_PATH = 'output/csc/voc_2007_trainval/detections.pkl'
 
 __C.GENERATE_ROI = False
 __C.LEFT = 1.0

@@ -944,7 +944,7 @@ class pascal_voc(imdb):
         up_3072 = 0
         up_4096 = 0
 
-        if cfg.USE_FEEDBACK:
+        if 'USE_FEEDBACK' in cfg.keys() and cfg.USE_FEEDBACK:
             box_fb_list, score_fb_list = self._feedback_roidb(gt_roidb)
 
         for i, index in enumerate(self._image_index):
@@ -992,7 +992,7 @@ class pascal_voc(imdb):
                 0], 'box num({}) should equal score num({})'.format(
                     boxes.shape, scores.shape)
 
-            if cfg.USE_FEEDBACK:
+            if 'USE_FEEDBACK' in cfg.keys() and cfg.USE_FEEDBACK:
                 insert_p = min(cfg.TRAIN.ROIS_PER_IM, boxes.shape[0])
                 boxes_h = boxes[:insert_p]
                 boxes_t = boxes[insert_p:]
@@ -1014,7 +1014,7 @@ class pascal_voc(imdb):
             box_list.append(boxes)
             score_list.append(scores)
 
-        if cfg.USE_FEEDBACK:
+        if 'USE_FEEDBACK' in cfg.keys() and cfg.USE_FEEDBACK:
             cfg.TRAIN.ROIS_PER_IM += cfg.FEEDBACK_NUM
 
         print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
