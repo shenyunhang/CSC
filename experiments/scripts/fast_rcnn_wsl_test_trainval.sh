@@ -39,6 +39,11 @@ case $DATASET in
 		TEST_IMDB="voc_2012_test"
 		PT_DIR="pascal_voc"
 		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		TEST_IMDB="voc_2010_test"
+		PT_DIR="pascal_voc"
+		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
