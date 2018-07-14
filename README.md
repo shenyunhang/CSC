@@ -1,5 +1,5 @@
 # CSC
-Object-Aware Spatial Constraint for Weakly Supervised Detection
+Category-Aware Spatial Constraint for Weakly Supervised Detection
 
 ### Contents
 1. [Requirements: software](#requirements-software)
