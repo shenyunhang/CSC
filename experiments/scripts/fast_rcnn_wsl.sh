@@ -40,6 +40,12 @@ case $DATASET in
 		PT_DIR="pascal_voc"
 		ITERS=80000
 		;;
+	pascal_voc10)
+		TRAIN_IMDB="voc_2010_trainval"
+		TEST_IMDB="voc_2010_test"
+		PT_DIR="pascal_voc"
+		ITERS=80000
+		;;
 	coco)
 		TRAIN_IMDB="coco_2014_train"
 		TEST_IMDB="coco_2014_minival"
@@ -65,7 +71,7 @@ echo ---------------------------------------------------------------------
 
 time ./tools/train_net.py --gpu ${GPU_ID} \
 	--solver models/${PT_DIR}/${NET}/fast_rcnn_wsl/solver.prototxt \
-	--weights output/vgg16_csc_0703/voc_2012_trainval/VGG16_iter_20.caffemodel \
+	--weights output/vgg16_voc10_csc_0705/voc_2010_trainval/VGG16_iter_20.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fast_rcnn_wsl.yml \
