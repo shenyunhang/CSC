@@ -236,7 +236,7 @@ do
 			--cfg experiments/cfgs/gan_ssd_300.yml \
 			${EXTRA_ARGS} \
 			RNG_SEED ${RANDOM} \
-			TRAIN.PSEUDO_PATH ${F}/detections_o.pkl
+			PSEUDO_PATH ${F}/detections_o.pkl
 	else
 		echo ${RANDOM}
 	fi

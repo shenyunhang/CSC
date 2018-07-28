@@ -211,7 +211,7 @@ do
 			--iters ${ITERS} \
 			--cfg experiments/cfgs/gan_ssd_512.yml \
 			${EXTRA_ARGS} \
-			TRAIN.PSEUDO_PATH output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}/detections_o.pkl
+			PSEUDO_PATH output/${EXP_DIR}/csc/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}/detections_o.pkl
 	fi
 
 

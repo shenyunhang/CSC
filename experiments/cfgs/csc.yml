@@ -22,3 +22,4 @@ CONTEXT: False
 USE_ROI_SCORE: True
 USE_BG: False
 WSL: True
+CSC_DEBUG: False
