@@ -1,6 +1,22 @@
 # CSC
 Category-Aware Spatial Constraint for Weakly Supervised Detection
 
+
+
+## Citing CSC
+
+If you find CSC useful in your research, please consider citing:
+
+```
+@article{shen2019tip,
+author = {Shen, Yunhang and Ji, Rongrong and Yang, Kuiyuan and Deng, Cheng and Wang, Changhu},
+journal = {IEEE TRANSACTIONS ON IMAGE PROCESSING},
+title = {{Category-Aware Spatial Constraint for Weakly}},
+year = {2019}
+}
+
+```
+
 ### Contents
 1. [Requirements: software](#requirements-software)
 2. [Requirements: hardware](#requirements-hardware)
