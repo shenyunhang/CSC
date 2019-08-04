@@ -3,7 +3,7 @@ Category-Aware Spatial Constraint for Weakly Supervised Detection
 
 
 
-## Citing CSC
+### Citing CSC
 
 If you find CSC useful in your research, please consider citing:
 
