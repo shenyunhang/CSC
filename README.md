@@ -10,7 +10,7 @@ If you find CSC useful in your research, please consider citing:
 ```
 @article{CSC_2019_TIP,
 author = {Shen, Yunhang and Ji, Rongrong and Yang, Kuiyuan and Deng, Cheng and Wang, Changhu},
-journal = {IEEE TRANSACTIONS ON IMAGE PROCESSING},
+journal = {IEEE TRANSACTIONS ON IMAGE PROCESSING (TIP)},
 title = {Category-Aware Spatial Constraint for Weakly Supervised Detection},
 year = {2019}
 }
