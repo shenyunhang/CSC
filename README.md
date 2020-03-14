@@ -1,7 +1,9 @@
 # CSC
 Category-Aware Spatial Constraint for Weakly Supervised Detection
 
+By [Yunhang Shen](), [Rongrong Ji](), [Kuiyuan Yang](), [Cheng Deng](), [Changhu Wang]().
 
+TIP 2019 Paper.
 
 ### Citing CSC
 
